@@ -1,30 +1,59 @@
 /* =========================================================
- *  옷갈아입히기 게임 - 메인 로직
- *  - 트레이 → 무대 드래그앤드랍으로 아이템 배치
- *  - 배치된 아이템: 이동 / 확대·축소 / 회전 / 반전 / 순서 / 삭제
- *  - PNG 저장, 초기화, 랜덤
+ *  옷갈아입히기 - 메인 로직 (업로드된 APC_assets 기반)
+ *  - 트레이 → 무대 드래그앤드랍
+ *  - 머리/몸/발 슬롯에 "착 붙이기"(스냅)
+ *  - 이동/확대/회전/반전/순서/삭제, 바디 교체, PNG 저장
  * ========================================================= */
 (() => {
   'use strict';
 
-  const stage     = document.getElementById('stage');
-  const layers    = document.getElementById('layers');
-  const character = document.getElementById('character');
-  const tabsEl    = document.getElementById('tabs');
-  const trayEl    = document.getElementById('tray');
-  const toolbar   = document.getElementById('itemToolbar');
+  const BASE = 'assets/';
+  const $ = (id) => document.getElementById(id);
 
-  let placed   = [];     // 배치된 아이템 목록 (DOM element 배열)
-  let selected = null;   // 현재 선택된 아이템
-  let zCounter = 1;
+  const stage     = $('stage');
+  const layers    = $('layers');
+  const bodyImg   = $('bodyImg');
+  const tabsEl    = $('tabs');
+  const trayEl    = $('tray');
+  const toolbar   = $('itemToolbar');
+  const snapGuide = $('snapGuide');
+  const snapChk   = $('snapChk');
+  const bodyPicker= $('bodyPicker');
+
+  let placed   = [];
+  let selected = null;
+  let zCounter = 60;
   let uid      = 0;
+  let curBody  = DATA.bodies[0];
 
-  // 베이스 캐릭터 렌더 (고정)
-  character.innerHTML = CHARACTER_SVG;
+  const SW = () => stage.clientWidth;
+  const SH = () => stage.clientHeight;
+  const snapEnabled = () => snapChk.checked;
+  const snapR = () => SW() * 0.30;
 
-  /* ---------- 탭 + 트레이 ---------- */
+  /* ---------- 바디 ---------- */
+  function setBody(b) {
+    curBody = b;
+    bodyImg.src = BASE + b.file;
+    [...bodyPicker.children].forEach(c =>
+      c.classList.toggle('active', c.dataset.id === b.id));
+  }
+  function buildBodyPicker() {
+    DATA.bodies.forEach(b => {
+      const t = document.createElement('button');
+      t.className = 'body-thumb';
+      t.dataset.id = b.id;
+      t.innerHTML = `<img src="${BASE + b.file}" alt="${b.name}" draggable="false"/>`;
+      t.title = b.name;
+      t.onclick = () => setBody(b);
+      bodyPicker.appendChild(t);
+    });
+    setBody(curBody);
+  }
+
+  /* ---------- 탭 / 트레이 ---------- */
   function buildTabs() {
-    CATEGORIES.forEach((cat, i) => {
+    DATA.categories.forEach((cat, i) => {
       const b = document.createElement('button');
       b.className = 'tab' + (i === 0 ? ' active' : '');
       b.innerHTML = `<span>${cat.icon}</span>${cat.name}`;
@@ -35,7 +64,7 @@
       };
       tabsEl.appendChild(b);
     });
-    renderTray(CATEGORIES[0]);
+    renderTray(DATA.categories[0]);
   }
 
   function renderTray(cat) {
@@ -44,103 +73,136 @@
       const cell = document.createElement('div');
       cell.className = 'tray-item';
       cell.title = item.name;
-      cell.innerHTML = `<div class="thumb">${item.svg}</div><span>${item.name}</span>`;
-      // 트레이에서 드래그 시작 → 무대에 새 아이템 생성
+      cell.innerHTML =
+        `<div class="thumb"><img src="${BASE + item.file}" draggable="false"/></div>` +
+        `<span>${item.name}</span>`;
       cell.addEventListener('pointerdown', (e) => startTrayDrag(e, item));
       trayEl.appendChild(cell);
     });
   }
 
-  /* ---------- 아이템 생성 ---------- */
-  function createPlaced(item, leftPx, topPx) {
-    const el = document.createElement('div');
+  /* ---------- 배치 아이템 생성 ---------- */
+  function createPlaced(item, centerX, centerY, wPx) {
+    const aspect = item.h / item.w;          // 세로/가로
+    const w = wPx != null ? wPx : item.aw * SW();
+    const h = w * aspect;
+
+    const el = document.createElement('img');
     el.className = 'placed';
+    el.src = BASE + item.file;
+    el.draggable = false;
     el.dataset.uid = ++uid;
-    el.dataset.itemId = item.id;
-    el.innerHTML = item.svg;
 
-    const w = item.defaultW || 180;
-    el.style.width  = w + 'px';
-    el.style.height = w + 'px';
-    el.style.left   = leftPx + 'px';
-    el.style.top    = topPx + 'px';
-
-    // 변형 상태
-    el._state = { x: leftPx, y: topPx, w, rot: 0, flip: 1, z: ++zCounter };
-    el.style.zIndex = el._state.z;
-    applyTransform(el);
+    const st = {
+      item, w, h, aspect,
+      cx: centerX, cy: centerY,
+      rot: 0, flip: 1, z: item.z || ++zCounter
+    };
+    el._state = st;
+    applyBox(el);
+    el.style.zIndex = st.z;
 
     layers.appendChild(el);
     placed.push(el);
 
-    // 배치된 아이템 드래그(이동) + 선택
     el.addEventListener('pointerdown', (e) => startMove(e, el));
     el.addEventListener('dblclick', () => removeItem(el));
-
     return el;
   }
 
-  function applyTransform(el) {
+  // 상태(중심좌표/크기/회전) → 스타일
+  function applyBox(el) {
     const s = el._state;
+    s.h = s.w * s.aspect;
     el.style.width  = s.w + 'px';
-    el.style.height = s.w + 'px';
+    el.style.height = s.h + 'px';
+    el.style.left   = (s.cx - s.w / 2) + 'px';
+    el.style.top    = (s.cy - s.h / 2) + 'px';
     el.style.transform = `rotate(${s.rot}deg) scaleX(${s.flip})`;
   }
+
+  /* ---------- 스냅(착 붙이기) ---------- */
+  function anchorPx(item) {
+    return { x: item.cx * SW(), y: item.cy * SH(), w: item.aw * SW() };
+  }
+  function maybeSnap(el) {
+    if (!snapEnabled()) return false;
+    const s = el._state;
+    const a = anchorPx(s.item);
+    const d = Math.hypot(s.cx - a.x, s.cy - a.y);
+    if (d <= snapR()) {
+      s.cx = a.x; s.cy = a.y; s.w = a.w; s.rot = 0; s.flip = 1;
+      applyBox(el);
+      return true;
+    }
+    return false;
+  }
+  function fitToBody(el) {        // 무조건 슬롯에 맞춤
+    const s = el._state;
+    const a = anchorPx(s.item);
+    s.cx = a.x; s.cy = a.y; s.w = a.w; s.rot = 0; s.flip = 1;
+    applyBox(el);
+  }
+  function showGuide(item) {
+    const a = anchorPx(item);
+    const h = a.w * (item.h / item.w);
+    snapGuide.style.width  = a.w + 'px';
+    snapGuide.style.height = h + 'px';
+    snapGuide.style.left   = (a.x - a.w / 2) + 'px';
+    snapGuide.style.top    = (a.y - h / 2) + 'px';
+    snapGuide.hidden = false;
+  }
+  function hideGuide() { snapGuide.hidden = true; }
 
   /* ---------- 트레이 → 무대 드래그 ---------- */
   function startTrayDrag(e, item) {
     e.preventDefault();
     const rect = stage.getBoundingClientRect();
-    const w = item.defaultW || 180;
-    let left = e.clientX - rect.left - w / 2;
-    let top  = e.clientY - rect.top  - w / 2;
-    const el = createPlaced(item, left, top);
+    const cx = e.clientX - rect.left;
+    const cy = e.clientY - rect.top;
+    const el = createPlaced(item, cx, cy);
     select(el);
-
-    const move = (ev) => {
-      left = ev.clientX - rect.left - w / 2;
-      top  = ev.clientY - rect.top  - w / 2;
-      el._state.x = left; el._state.y = top;
-      el.style.left = left + 'px';
-      el.style.top  = top + 'px';
-      positionToolbar(el);
-    };
-    const up = () => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
-    };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', up);
+    dragLoop(e, el, item);
   }
 
-  /* ---------- 배치된 아이템 이동 ---------- */
+  /* ---------- 배치 아이템 이동 ---------- */
   function startMove(e, el) {
     e.preventDefault();
     e.stopPropagation();
     select(el);
+    dragLoop(e, el, el._state.item);
+  }
+
+  function dragLoop(e, el, item) {
     const rect = stage.getBoundingClientRect();
-    const startX = e.clientX, startY = e.clientY;
-    const origX = el._state.x, origY = el._state.y;
-    let moved = false;
+    const s = el._state;
+    const grabX = e.clientX - rect.left - s.cx;
+    const grabY = e.clientY - rect.top  - s.cy;
 
     const move = (ev) => {
-      const dx = ev.clientX - startX, dy = ev.clientY - startY;
-      if (Math.abs(dx) + Math.abs(dy) > 3) moved = true;
-      el._state.x = origX + dx;
-      el._state.y = origY + dy;
-      el.style.left = el._state.x + 'px';
-      el.style.top  = el._state.y + 'px';
+      s.cx = ev.clientX - rect.left - grabX;
+      s.cy = ev.clientY - rect.top  - grabY;
+      applyBox(el);
       positionToolbar(el);
+      // 스냅 가이드 표시
+      if (snapEnabled()) {
+        const a = anchorPx(item);
+        if (Math.hypot(s.cx - a.x, s.cy - a.y) <= snapR() * 1.25) showGuide(item);
+        else hideGuide();
+      }
     };
     const up = () => {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
+      hideGuide();
+      maybeSnap(el);
+      positionToolbar(el);
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
   }
 
-  /* ---------- 선택 ---------- */
+  /* ---------- 선택 / 툴바 ---------- */
   function select(el) {
     if (selected) selected.classList.remove('selected');
     selected = el;
@@ -152,24 +214,23 @@
       toolbar.hidden = true;
     }
   }
-
   function positionToolbar(el) {
-    if (!el) return;
-    const sRect = stage.getBoundingClientRect();
-    const wrap = stage.parentElement.getBoundingClientRect();
-    let cx = el._state.x + el._state.w / 2 + (sRect.left - wrap.left);
-    let top = el._state.y + (sRect.top - wrap.top) - 50;
-    if (top < 4) top = el._state.y + el._state.w + (sRect.top - wrap.top) + 8;
-    toolbar.style.left = cx + 'px';
+    if (!el || toolbar.hidden) return;
+    const s = el._state;
+    const wrapRect  = stage.parentElement.getBoundingClientRect();
+    const stageRect = stage.getBoundingClientRect();
+    const offX = stageRect.left - wrapRect.left;
+    const offY = stageRect.top  - wrapRect.top;
+    let left = offX + s.cx;
+    let top  = offY + (s.cy - s.h / 2) - 46;
+    if (top < offY - 4) top = offY + (s.cy + s.h / 2) + 8;
+    toolbar.style.left = left + 'px';
     toolbar.style.top  = top + 'px';
   }
 
-  // 무대 빈 곳 클릭 → 선택 해제
   stage.addEventListener('pointerdown', (e) => {
-    if (e.target === stage || e.target === layers || e.target === character ||
-        character.contains(e.target)) {
-      select(null);
-    }
+    if (e.target === stage || e.target === bodyImg || e.target === layers ||
+        e.target === snapGuide) select(null);
   });
 
   /* ---------- 편집 동작 ---------- */
@@ -178,120 +239,110 @@
     el.remove();
     if (selected === el) select(null);
   }
-
   toolbar.addEventListener('click', (e) => {
     const act = e.target.closest('button')?.dataset.act;
     if (!act || !selected) return;
     const s = selected._state;
     switch (act) {
-      case 'scaleUp':   s.w = Math.min(s.w * 1.12, 600); break;
-      case 'scaleDown': s.w = Math.max(s.w * 0.89, 40);  break;
-      case 'rotateL':   s.rot -= 15; break;
-      case 'rotateR':   s.rot += 15; break;
-      case 'flip':      s.flip *= -1; break;
+      case 'fit':       fitToBody(selected); break;
+      case 'scaleUp':   s.w = Math.min(s.w * 1.12, SW() * 1.8); applyBox(selected); break;
+      case 'scaleDown': s.w = Math.max(s.w * 0.89, 24);         applyBox(selected); break;
+      case 'rotateL':   s.rot -= 15; applyBox(selected); break;
+      case 'rotateR':   s.rot += 15; applyBox(selected); break;
+      case 'flip':      s.flip *= -1; applyBox(selected); break;
       case 'front':     s.z = ++zCounter; selected.style.zIndex = s.z; break;
-      case 'back':      s.z = 0; selected.style.zIndex = 0; break;
+      case 'back':      s.z = 1;          selected.style.zIndex = 1; break;
       case 'delete':    removeItem(selected); return;
     }
-    applyTransform(selected);
     positionToolbar(selected);
   });
 
   /* ---------- 하단 버튼 ---------- */
-  document.getElementById('btnReset').onclick = () => {
+  $('btnReset').onclick = () => {
     placed.forEach(p => p.remove());
     placed = [];
     select(null);
   };
 
-  document.getElementById('btnRandom').onclick = () => {
-    document.getElementById('btnReset').onclick();
-    const pick = (cat) => cat.items[Math.floor(Math.random() * cat.items.length)];
-    // 캐릭터 비율에 맞춘 대략적 위치 (stage 360x520 기준)
-    const place = (catId, cx, cy) => {
-      const cat = CATEGORIES.find(c => c.id === catId);
-      if (!cat) return;
-      const item = pick(cat);
-      const w = item.defaultW || 180;
-      createPlaced(item, cx - w / 2, cy - w / 2);
-    };
-    place('hair', 180, 110);
-    if (Math.random() < 0.5) {
-      place('dress', 180, 320);
+  function itemsOf(catId) {
+    return DATA.categories.find(c => c.id === catId)?.items || [];
+  }
+  function rand(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+  function placeSnapped(item) {
+    const a = anchorPx(item);
+    createPlaced(item, a.x, a.y, a.w);
+  }
+
+  $('btnRandom').onclick = () => {
+    $('btnReset').onclick();
+    placeSnapped(rand(itemsOf('hair')));
+    if (Math.random() < 0.45) {
+      placeSnapped(rand(itemsOf('dress')));
     } else {
-      place('top', 180, 280);
-      place('bottom', 180, 380);
+      placeSnapped(rand(itemsOf('top')));
+      placeSnapped(rand(itemsOf('bottom')));
     }
-    place('shoes', 180, 470);
-    if (Math.random() < 0.6) place('hat', 180, 70);
-    if (Math.random() < 0.5) place('glasses', 180, 120);
-    if (Math.random() < 0.4) place('acc', 250, 300);
+    placeSnapped(rand(itemsOf('shoes')));
+    if (Math.random() < 0.6) placeSnapped(rand(itemsOf('acc')));
     select(null);
   };
 
   /* ---------- PNG 저장 ---------- */
-  document.getElementById('btnSave').onclick = async () => {
+  $('btnSave').onclick = async () => {
     select(null);
-    const W = stage.clientWidth, H = stage.clientHeight;
-    const scale = 2;
+    hideGuide();
+    const W = SW(), H = SH(), scale = 2;
+    const canvas = document.createElement('canvas');
+    canvas.width = W * scale; canvas.height = H * scale;
+    const ctx = canvas.getContext('2d');
 
-    // 무대 전체를 하나의 SVG로 합성
-    const parts = [];
-    parts.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${W*scale}" height="${H*scale}" viewBox="0 0 ${W} ${H}">`);
-    parts.push(`<rect width="${W}" height="${H}" fill="#fdf3f7"/>`);
-
-    // 캐릭터 (stage를 꽉 채우도록 그려져 있음)
-    parts.push(`<g>${svgInner(character)}</g>`);
-
-    // 배치된 아이템 (z순 정렬)
-    const sorted = [...placed].sort((a, b) => (a._state.z||0) - (b._state.z||0));
-    sorted.forEach(el => {
-      const s = el._state;
-      const cx = s.x + s.w / 2, cy = s.y + s.w / 2;
-      // viewBox 0 0 200 200 → s.w 크기로 스케일
-      const k = s.w / 200;
-      const t = `translate(${cx} ${cy}) rotate(${s.rot}) scale(${s.flip*k} ${k}) translate(-100 -100)`;
-      parts.push(`<g transform="${t}">${svgInner(el)}</g>`);
-    });
-    parts.push(`</svg>`);
-
-    const svgStr = parts.join('');
-    const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
+    // 배경
+    ctx.fillStyle = '#fdf3f7';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     try {
-      const img = await loadImage(url);
-      const canvas = document.createElement('canvas');
-      canvas.width = W * scale; canvas.height = H * scale;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0);
+      // 베이스 바디
+      const bImg = await loadImg(BASE + curBody.file);
+      ctx.drawImage(bImg, 0, 0, canvas.width, canvas.height);
+
+      // 아이템 (z 순서)
+      const sorted = [...placed].sort((a, b) => (a._state.z || 0) - (b._state.z || 0));
+      for (const el of sorted) {
+        const s = el._state;
+        const img = await loadImg(el.src);
+        ctx.save();
+        ctx.translate(s.cx * scale, s.cy * scale);
+        ctx.rotate(s.rot * Math.PI / 180);
+        ctx.scale(s.flip, 1);
+        ctx.drawImage(img, -s.w * scale / 2, -s.h * scale / 2, s.w * scale, s.h * scale);
+        ctx.restore();
+      }
+
       const a = document.createElement('a');
       a.download = 'my-dressup.png';
       a.href = canvas.toDataURL('image/png');
       a.click();
     } catch (err) {
-      alert('저장 중 문제가 발생했어요. 다시 시도해 주세요.');
       console.error(err);
-    } finally {
-      URL.revokeObjectURL(url);
+      alert('이미지 저장에 실패했어요. 로컬 서버로 열면(예: python3 -m http.server) 정상 저장됩니다.');
     }
   };
 
-  // 요소 안의 <svg> 내부 마크업만 추출
-  function svgInner(host) {
-    const svg = host.querySelector('svg');
-    return svg ? svg.innerHTML : '';
-  }
-
-  function loadImage(src) {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-      img.src = src;
+  function loadImg(src) {
+    return new Promise((res, rej) => {
+      const im = new Image();
+      im.crossOrigin = 'anonymous';
+      im.onload = () => res(im);
+      im.onerror = rej;
+      im.src = src;
     });
   }
 
+  /* ---------- 리사이즈 시 툴바 위치 갱신 ---------- */
+  window.addEventListener('resize', () => positionToolbar(selected));
+
   /* ---------- 시작 ---------- */
+  buildBodyPicker();
   buildTabs();
 })();

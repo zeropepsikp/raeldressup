@@ -8,23 +8,28 @@
 </head>
 <body>
   <header class="app-header">
-    <h1>👗 드래그앤드랍 옷갈아입히기</h1>
-    <p class="subtitle">아이템을 캐릭터 위로 끌어다 원하는 곳에 놓아보세요</p>
+    <h1>👗 옷갈아입히기</h1>
+    <p class="subtitle">아이템을 캐릭터의 머리·몸·발로 끌어다 놓으면 착! 붙어요</p>
   </header>
 
   <main class="app">
     <!-- 캐릭터 무대 -->
     <section class="stage-panel">
+      <!-- 바디 선택 -->
+      <div id="bodyPicker" class="body-picker"></div>
+
       <div class="stage-wrap">
         <div id="stage" class="stage">
-          <!-- 고정 베이스 캐릭터 -->
-          <div id="character" class="character"></div>
-          <!-- 배치된 아이템들이 여기에 들어감 -->
+          <img id="bodyImg" class="body-img" alt="character" draggable="false" />
+          <!-- 스냅 가이드 -->
+          <div id="snapGuide" class="snap-guide" hidden></div>
+          <!-- 배치된 아이템 -->
           <div id="layers" class="layers"></div>
         </div>
 
-        <!-- 선택된 아이템 컨트롤 바 -->
+        <!-- 선택 아이템 편집 툴바 -->
         <div id="itemToolbar" class="item-toolbar" hidden>
+          <button data-act="fit"      title="몸에 맞추기">📌</button>
           <button data-act="scaleUp"  title="크게">➕</button>
           <button data-act="scaleDown" title="작게">➖</button>
           <button data-act="rotateL"  title="왼쪽 회전">↺</button>
@@ -36,15 +41,20 @@
         </div>
       </div>
 
+      <label class="snap-toggle">
+        <input type="checkbox" id="snapChk" checked />
+        <span>착 붙이기 (머리·몸·발 자동 정렬)</span>
+      </label>
+
       <div class="stage-actions">
         <button id="btnRandom" class="btn">🎲 랜덤</button>
         <button id="btnReset"  class="btn">🔄 초기화</button>
         <button id="btnSave"   class="btn btn-primary">💾 이미지 저장</button>
       </div>
-      <p class="hint">아이템을 탭하면 위에 편집 버튼이 떠요 · 더블탭으로 빠르게 삭제</p>
+      <p class="hint">탭=선택 · 드래그=이동 · 더블탭=삭제 · 📌=몸에 딱 맞추기</p>
     </section>
 
-    <!-- 옷장(아이템 트레이) -->
+    <!-- 옷장 -->
     <section class="wardrobe">
       <nav id="tabs" class="tabs"></nav>
       <div id="tray" class="tray"></div>

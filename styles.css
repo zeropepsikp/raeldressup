@@ -1,7 +1,6 @@
 :root {
   --pink:   #ff6f9c;
   --pink-d: #e0457a;
-  --bg:     #fff0f5;
   --stage:  #fdf3f7;
   --panel:  #ffffff;
   --ink:    #4a3340;
@@ -14,54 +13,76 @@ body {
   margin: 0;
   font-family: "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
   color: var(--ink);
-  background: linear-gradient(160deg, #ffe3ee 0%, #fff6e9 60%, #e9f5ff 100%);
+  background: linear-gradient(160deg, #ffe3ee 0%, #fff6e9 55%, #e9f5ff 100%);
   min-height: 100vh;
   user-select: none;
 }
 
-.app-header {
-  text-align: center;
-  padding: 18px 12px 6px;
-}
-.app-header h1 { margin: 0; font-size: 26px; }
-.subtitle { margin: 4px 0 0; font-size: 14px; opacity: .7; }
+.app-header { text-align: center; padding: 16px 12px 4px; }
+.app-header h1 { margin: 0; font-size: 24px; }
+.subtitle { margin: 4px 0 0; font-size: 13px; opacity: .7; }
 
 .app {
   display: flex;
   gap: 18px;
-  padding: 14px 18px 28px;
-  max-width: 1100px;
+  padding: 12px 18px 28px;
+  max-width: 1120px;
   margin: 0 auto;
   align-items: flex-start;
 }
 
+/* ---------- 바디 선택 ---------- */
+.body-picker {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+.body-thumb {
+  width: 46px; height: 70px;
+  padding: 0;
+  border: 2px solid #ffd7e6;
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform .1s, border-color .15s;
+}
+.body-thumb img { width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+.body-thumb:hover { transform: translateY(-2px); }
+.body-thumb.active { border-color: var(--pink); box-shadow: var(--shadow); }
+
 /* ---------- 무대 ---------- */
 .stage-panel { flex: 0 0 auto; }
-
 .stage-wrap { position: relative; }
 
 .stage {
   position: relative;
-  width: 360px;
-  height: 520px;
-  background: radial-gradient(circle at 50% 30%, #ffffff 0%, var(--stage) 70%);
-  border-radius: 24px;
+  height: 600px;
+  aspect-ratio: 543 / 1100;
+  background: radial-gradient(circle at 50% 28%, #ffffff 0%, var(--stage) 72%);
+  border-radius: 22px;
   box-shadow: var(--shadow);
   border: 3px solid #ffd7e6;
   overflow: hidden;
   touch-action: none;
 }
-
-.character {
-  position: absolute;
-  inset: 0;
+.body-img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: fill;
   pointer-events: none;
+  -webkit-user-drag: none;
 }
+.layers { position: absolute; inset: 0; pointer-events: none; }
 
-.layers {
+.snap-guide {
   position: absolute;
-  inset: 0;
+  border: 2px dashed var(--pink);
+  background: rgba(255,111,156,.12);
+  border-radius: 10px;
   pointer-events: none;
+  z-index: 5;
 }
 
 .placed {
@@ -69,22 +90,17 @@ body {
   pointer-events: auto;
   cursor: grab;
   transform-origin: center center;
+  -webkit-user-drag: none;
   will-change: transform, left, top;
 }
 .placed:active { cursor: grabbing; }
-.placed svg { width: 100%; height: 100%; display: block; pointer-events: none; }
-.placed.selected {
-  outline: 2px dashed var(--pink);
-  outline-offset: 2px;
-  border-radius: 6px;
-}
+.placed.selected { outline: 2px dashed var(--pink); outline-offset: 1px; }
 
-/* 선택 아이템 편집 툴바 */
+/* 편집 툴바 */
 .item-toolbar {
   position: absolute;
-  display: flex;
-  gap: 4px;
-  padding: 5px 7px;
+  display: flex; gap: 3px;
+  padding: 4px 6px;
   background: #fff;
   border-radius: 999px;
   box-shadow: var(--shadow);
@@ -95,72 +111,61 @@ body {
 .item-toolbar button {
   border: none;
   background: #fff0f5;
-  width: 32px; height: 32px;
+  width: 30px; height: 30px;
   border-radius: 50%;
-  font-size: 15px;
+  font-size: 14px;
   cursor: pointer;
-  display: grid;
-  place-items: center;
+  display: grid; place-items: center;
   transition: transform .08s, background .15s;
 }
 .item-toolbar button:hover { background: #ffd7e6; transform: translateY(-2px); }
 .item-toolbar button.danger { background: #ffe1e1; }
 .item-toolbar button.danger:hover { background: #ffc2c2; }
 
-/* 무대 하단 버튼 */
-.stage-actions {
-  display: flex;
-  gap: 8px;
+.snap-toggle {
+  display: flex; align-items: center; gap: 7px;
   justify-content: center;
-  margin-top: 14px;
+  margin: 12px 0 6px;
+  font-size: 13px; font-weight: 600;
+  cursor: pointer;
 }
+.snap-toggle input { width: 16px; height: 16px; accent-color: var(--pink); }
+
+.stage-actions { display: flex; gap: 8px; justify-content: center; margin-top: 4px; }
 .btn {
   border: 2px solid #ffd7e6;
   background: #fff;
   color: var(--ink);
   padding: 9px 14px;
   border-radius: 12px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 14px; font-weight: 600;
   cursor: pointer;
   transition: transform .08s, box-shadow .15s;
 }
 .btn:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
 .btn-primary { background: var(--pink); border-color: var(--pink-d); color: #fff; }
 
-.hint {
-  text-align: center;
-  font-size: 12px;
-  opacity: .6;
-  margin: 10px 0 0;
-}
+.hint { text-align: center; font-size: 12px; opacity: .6; margin: 8px 0 0; }
 
 /* ---------- 옷장 ---------- */
 .wardrobe {
   flex: 1 1 auto;
   background: var(--panel);
-  border-radius: 24px;
+  border-radius: 22px;
   box-shadow: var(--shadow);
   padding: 14px;
   min-width: 280px;
+  position: sticky;
+  top: 12px;
 }
-
-.tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 12px;
-}
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
 .tab {
-  display: flex;
-  align-items: center;
-  gap: 5px;
+  display: flex; align-items: center; gap: 5px;
   border: 2px solid transparent;
   background: #fff0f5;
   padding: 7px 12px;
   border-radius: 999px;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 13px; font-weight: 600;
   color: var(--ink);
   cursor: pointer;
   transition: all .15s;
@@ -171,14 +176,16 @@ body {
 
 .tray {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
   gap: 10px;
+  max-height: 70vh;
+  overflow-y: auto;
 }
 .tray-item {
   background: #fff8fb;
   border: 2px solid #ffe1ec;
-  border-radius: 16px;
-  padding: 8px 6px 6px;
+  border-radius: 14px;
+  padding: 6px;
   text-align: center;
   cursor: grab;
   transition: transform .1s, box-shadow .15s, border-color .15s;
@@ -191,18 +198,16 @@ body {
 }
 .tray-item:active { cursor: grabbing; }
 .tray-item .thumb {
-  width: 100%;
-  aspect-ratio: 1;
-  display: grid;
-  place-items: center;
+  width: 100%; aspect-ratio: 1;
+  display: grid; place-items: center;
   pointer-events: none;
 }
-.tray-item .thumb svg { width: 86%; height: 86%; }
-.tray-item span { font-size: 12px; display: block; margin-top: 2px; }
+.tray-item .thumb img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.tray-item span { font-size: 11.5px; display: block; margin-top: 3px; }
 
 /* ---------- 반응형 ---------- */
-@media (max-width: 820px) {
+@media (max-width: 860px) {
   .app { flex-direction: column; align-items: center; }
-  .stage { width: 320px; height: 462px; }
-  .wardrobe { width: 100%; max-width: 460px; }
+  .stage { height: 520px; }
+  .wardrobe { width: 100%; max-width: 480px; position: static; }
 }
