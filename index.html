@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>드래그앤드랍 옷갈아입히기</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>👗 드래그앤드랍 옷갈아입히기</h1>
+    <p class="subtitle">아이템을 캐릭터 위로 끌어다 원하는 곳에 놓아보세요</p>
+  </header>
+
+  <main class="app">
+    <!-- 캐릭터 무대 -->
+    <section class="stage-panel">
+      <div class="stage-wrap">
+        <div id="stage" class="stage">
+          <!-- 고정 베이스 캐릭터 -->
+          <div id="character" class="character"></div>
+          <!-- 배치된 아이템들이 여기에 들어감 -->
+          <div id="layers" class="layers"></div>
+        </div>
+
+        <!-- 선택된 아이템 컨트롤 바 -->
+        <div id="itemToolbar" class="item-toolbar" hidden>
+          <button data-act="scaleUp"  title="크게">➕</button>
+          <button data-act="scaleDown" title="작게">➖</button>
+          <button data-act="rotateL"  title="왼쪽 회전">↺</button>
+          <button data-act="rotateR"  title="오른쪽 회전">↻</button>
+          <button data-act="flip"     title="좌우반전">⇄</button>
+          <button data-act="front"    title="맨 앞으로">⬆</button>
+          <button data-act="back"     title="맨 뒤로">⬇</button>
+          <button data-act="delete"   title="삭제" class="danger">🗑</button>
+        </div>
+      </div>
+
+      <div class="stage-actions">
+        <button id="btnRandom" class="btn">🎲 랜덤</button>
+        <button id="btnReset"  class="btn">🔄 초기화</button>
+        <button id="btnSave"   class="btn btn-primary">💾 이미지 저장</button>
+      </div>
+      <p class="hint">아이템을 탭하면 위에 편집 버튼이 떠요 · 더블탭으로 빠르게 삭제</p>
+    </section>
+
+    <!-- 옷장(아이템 트레이) -->
+    <section class="wardrobe">
+      <nav id="tabs" class="tabs"></nav>
+      <div id="tray" class="tray"></div>
+    </section>
+  </main>
+
+  <script src="assets.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
