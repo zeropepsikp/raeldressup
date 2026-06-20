@@ -97,6 +97,7 @@ body {
 .placed.selected { outline: 2px dashed var(--pink); outline-offset: 1px; }
 
 /* 편집 툴바 */
+.item-toolbar[hidden] { display: none !important; }
 .item-toolbar {
   position: absolute;
   display: flex; gap: 3px;

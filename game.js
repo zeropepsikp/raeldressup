@@ -228,10 +228,12 @@
     toolbar.style.top  = top + 'px';
   }
 
-  stage.addEventListener('pointerdown', (e) => {
-    if (e.target === stage || e.target === bodyImg || e.target === layers ||
-        e.target === snapGuide) select(null);
-  });
+  // capture 단계에서 실행: placed 아이템이나 툴바 바깥을 누르면 선택 해제
+  document.addEventListener('pointerdown', (e) => {
+    if (!selected) return;
+    if (selected.contains(e.target) || toolbar.contains(e.target)) return;
+    select(null);
+  }, true);
 
   /* ---------- 편집 동작 ---------- */
   function removeItem(el) {
