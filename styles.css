@@ -60,6 +60,14 @@ body {
 .cat-pill:hover { background: #ffe1ec; border-color: var(--pink-d); }
 .cat-pill.active { background: var(--pink); border-color: var(--pink-d); color: #fff; }
 
+.cat-sep {
+  width: 1px;
+  height: 24px;
+  background: #ffd7e6;
+  flex-shrink: 0;
+  align-self: center;
+}
+
 /* ── Row 2: 아이템 바 ── */
 .item-bar {
   display: flex;

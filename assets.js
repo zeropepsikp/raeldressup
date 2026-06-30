@@ -404,8 +404,11 @@ const CAT_META = [
 ];
 const DATA = {
   isSVG: true,
-  bodies: [{ id:'princess', name:'공주님', svg: PRINCESS_BODY, w:400, h:760 }],
+  bodies: [
+    { id: 'char1', name: '캐릭터 1', file: 'char1.png' },
+    { id: 'char2', name: '캐릭터 2', file: 'char2.png' },
+    { id: 'char3', name: '캐릭터 3', file: 'char3.png' },
+    { id: 'char4', name: '캐릭터 4', file: 'char4.png' },
+  ],
   categories: CAT_META.map(([id,name,icon]) => ({ id, name, icon, items: ITEMS[id] })),
-  // 시작 시 기본으로 올려둘 헤어
-  defaultHairId: ITEMS.hair[0].id,
 };
