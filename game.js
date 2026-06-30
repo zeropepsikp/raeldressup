@@ -138,7 +138,7 @@
 
   function placeItem(catId, item) {
     const aspect = item.h / item.w;
-    const w = item.aw * SW();
+    const w = item.aw * SW() * 0.8;   // 기본 크기 80%
     const h = w * aspect;
     const cx = item.cx * SW();
     const cy = item.cy * SH();
@@ -155,9 +155,7 @@
     layers.appendChild(el);
     slots[catId] = el;
 
-    attachDrag(el);
-    attachPinch(el);
-    attachDoubleTap(el, catId);
+    attachInteraction(el, catId);
   }
 
   function applyBox(el) {
@@ -170,87 +168,94 @@
     el.style.transform = `rotate(${s.rot}deg) scaleX(${s.flip})`;
   }
 
-  /* ---------- 무대 내 드래그 ---------- */
-  function attachDrag(el) {
+  /* ---------- 드래그 + 핀치 줌 + 더블탭 (통합 핸들러) ---------- */
+  function attachInteraction(el, catId) {
+    const ptrs = new Map();   // pointerId → {x, y}
+    let dragging = false;
+    let grabX = 0, grabY = 0;
+    let pinching = false;
+    let pinchInitDist = 0, pinchInitW = 0;
+    let hadPinch = false;     // 이번 터치 시퀀스에 핀치가 있었는지
+    let lastTapTime = 0;
+
     el.addEventListener('pointerdown', (e) => {
-      if (el._pinching) return;
       e.preventDefault();
       e.stopPropagation();
-
-      const s = el._state;
-      const rect = stage.getBoundingClientRect();
-      const grabX = e.clientX - rect.left - s.cx;
-      const grabY = e.clientY - rect.top  - s.cy;
-
       el.setPointerCapture(e.pointerId);
+      ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
-      const move = (ev) => {
-        if (el._pinching) return;
-        s.cx = ev.clientX - rect.left - grabX;
-        s.cy = ev.clientY - rect.top  - grabY;
-        applyBox(el);
-      };
-      const up = () => {
-        el.removeEventListener('pointermove', move);
-        el.removeEventListener('pointerup', up);
-      };
-      el.addEventListener('pointermove', move);
-      el.addEventListener('pointerup', up);
-    });
-  }
-
-  /* ---------- 핀치 줌 ---------- */
-  function attachPinch(el) {
-    const touches = new Map();
-    let initDist = 0;
-    let initW = 0;
-
-    el.addEventListener('pointerdown', (e) => {
-      touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (touches.size === 2) {
-        el._pinching = true;
-        const pts = [...touches.values()];
-        initDist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
-        initW = el._state.w;
-        e.preventDefault();
+      if (ptrs.size === 1) {
+        // 단일 손가락 → 드래그 시작
+        const rect = stage.getBoundingClientRect();
+        grabX = e.clientX - rect.left - el._state.cx;
+        grabY = e.clientY - rect.top  - el._state.cy;
+        dragging = true;
+      } else if (ptrs.size === 2) {
+        // 두 번째 손가락 → 핀치 시작, 드래그 취소
+        dragging = false;
+        pinching = true;
+        hadPinch = true;
+        const pts = [...ptrs.values()];
+        pinchInitDist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+        pinchInitW = el._state.w;
       }
     });
 
     el.addEventListener('pointermove', (e) => {
-      if (!touches.has(e.pointerId)) return;
-      touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (touches.size === 2 && initDist > 0) {
-        const pts = [...touches.values()];
-        const dist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
-        el._state.w = Math.max(24, Math.min(initW * (dist / initDist), SW() * 1.8));
+      if (!ptrs.has(e.pointerId)) return;
+      ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+      if (dragging && ptrs.size === 1) {
+        const rect = stage.getBoundingClientRect();
+        el._state.cx = e.clientX - rect.left - grabX;
+        el._state.cy = e.clientY - rect.top  - grabY;
         applyBox(el);
-        e.preventDefault();
+      } else if (pinching && ptrs.size === 2 && pinchInitDist > 0) {
+        const pts = [...ptrs.values()];
+        const dist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+        el._state.w = Math.max(24, Math.min(pinchInitW * (dist / pinchInitDist), SW() * 1.8));
+        applyBox(el);
       }
     });
 
-    const endTouch = (e) => {
-      touches.delete(e.pointerId);
-      if (touches.size < 2) {
-        initDist = 0;
-        setTimeout(() => { el._pinching = false; }, 50);
-      }
-    };
-    el.addEventListener('pointerup', endTouch);
-    el.addEventListener('pointercancel', endTouch);
-  }
+    el.addEventListener('pointerup', (e) => {
+      ptrs.delete(e.pointerId);
 
-  /* ---------- 더블탭으로 삭제 ---------- */
-  function attachDoubleTap(el, catId) {
-    let lastTap = 0;
-    el.addEventListener('pointerup', () => {
-      const now = Date.now();
-      if (now - lastTap < 300) {
-        removeSlot(catId);
-        if (activeCatId === catId) {
-          [...itemBar.querySelectorAll('.item-thumb')].forEach(t => t.classList.remove('active'));
+      if (ptrs.size === 0) {
+        // 모든 손가락이 떨어짐
+        if (!hadPinch) {
+          // 더블탭 판정 (핀치가 없었을 때만)
+          const now = Date.now();
+          if (now - lastTapTime < 300) {
+            removeSlot(catId);
+            if (activeCatId === catId) {
+              [...itemBar.querySelectorAll('.item-thumb')].forEach(t => t.classList.remove('active'));
+            }
+            lastTapTime = 0;
+          } else {
+            lastTapTime = now;
+          }
         }
+        dragging = false;
+        pinching = false;
+        pinchInitDist = 0;
+        hadPinch = false;
+      } else if (ptrs.size === 1) {
+        // 한 손가락 남음 (핀치 종료) → 드래그 재개 안 함
+        pinching = false;
+        pinchInitDist = 0;
+        dragging = false;
       }
-      lastTap = now;
+    });
+
+    el.addEventListener('pointercancel', (e) => {
+      ptrs.delete(e.pointerId);
+      if (ptrs.size === 0) {
+        dragging = false;
+        pinching = false;
+        pinchInitDist = 0;
+        hadPinch = false;
+      }
     });
   }
 
