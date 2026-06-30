@@ -10,6 +10,11 @@
   const BASE = 'assets/';
   const $ = (id) => document.getElementById(id);
 
+  // 아이템/바디 이미지 소스: SVG 인라인이면 data URI, 아니면 파일 경로
+  const srcOf = (o) => o.svg
+    ? 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(o.svg)
+    : BASE + o.file;
+
   const stage     = $('stage');
   const layers    = $('layers');
   const bodyImg   = $('bodyImg');
@@ -34,7 +39,7 @@
   /* ---------- 바디 ---------- */
   function setBody(b) {
     curBody = b;
-    bodyImg.src = BASE + b.file;
+    bodyImg.src = srcOf(b);
     [...bodyPicker.children].forEach(c =>
       c.classList.toggle('active', c.dataset.id === b.id));
   }
@@ -43,7 +48,7 @@
       const t = document.createElement('button');
       t.className = 'body-thumb';
       t.dataset.id = b.id;
-      t.innerHTML = `<img src="${BASE + b.file}" alt="${b.name}" draggable="false"/>`;
+      t.innerHTML = `<img src="${srcOf(b)}" alt="${b.name}" draggable="false"/>`;
       t.title = b.name;
       t.onclick = () => setBody(b);
       bodyPicker.appendChild(t);
@@ -74,7 +79,7 @@
       cell.className = 'tray-item';
       cell.title = item.name;
       cell.innerHTML =
-        `<div class="thumb"><img src="${BASE + item.file}" draggable="false"/></div>` +
+        `<div class="thumb"><img src="${srcOf(item)}" draggable="false"/></div>` +
         `<span>${item.name}</span>`;
       cell.addEventListener('pointerdown', (e) => startTrayDrag(e, item));
       trayEl.appendChild(cell);
@@ -89,7 +94,7 @@
 
     const el = document.createElement('img');
     el.className = 'placed';
-    el.src = BASE + item.file;
+    el.src = srcOf(item);
     el.draggable = false;
     el.dataset.uid = ++uid;
 
@@ -278,15 +283,22 @@
 
   $('btnRandom').onclick = () => {
     $('btnReset').onclick();
-    placeSnapped(rand(itemsOf('hair')));
-    if (Math.random() < 0.45) {
-      placeSnapped(rand(itemsOf('dress')));
+    const tryPlace = (cat, p = 1) => {
+      const list = itemsOf(cat);
+      if (list.length && Math.random() < p) placeSnapped(rand(list));
+    };
+    tryPlace('hair');
+    if (Math.random() < 0.5) {
+      tryPlace('dress');
     } else {
-      placeSnapped(rand(itemsOf('top')));
-      placeSnapped(rand(itemsOf('bottom')));
+      tryPlace('top');
+      tryPlace('bottom');
     }
-    placeSnapped(rand(itemsOf('shoes')));
-    if (Math.random() < 0.6) placeSnapped(rand(itemsOf('acc')));
+    tryPlace('shoe');
+    tryPlace('crown', 0.7);
+    tryPlace('earring', 0.6);
+    tryPlace('necklace', 0.6);
+    tryPlace('acc', 0.4);
     select(null);
   };
 
@@ -305,7 +317,7 @@
 
     try {
       // 베이스 바디
-      const bImg = await loadImg(BASE + curBody.file);
+      const bImg = await loadImg(srcOf(curBody));
       ctx.drawImage(bImg, 0, 0, canvas.width, canvas.height);
 
       // 아이템 (z 순서)
@@ -347,4 +359,15 @@
   /* ---------- 시작 ---------- */
   buildBodyPicker();
   buildTabs();
+
+  // 시작 시 기본 헤어를 머리에 올려두기 (대머리 방지)
+  function placeDefaultHair() {
+    if (!DATA.defaultHairId) return;
+    const hair = (DATA.categories.find(c => c.id === 'hair')?.items || [])
+      .find(it => it.id === DATA.defaultHairId);
+    if (hair) { const a = anchorPx(hair); createPlaced(hair, a.x, a.y, a.w); select(null); }
+  }
+  // 바디 이미지가 로드되어 stage 크기가 잡힌 뒤 배치
+  if (bodyImg.complete && SW()) placeDefaultHair();
+  else bodyImg.addEventListener('load', placeDefaultHair, { once: true });
 })();
