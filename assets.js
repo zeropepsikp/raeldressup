@@ -8,100 +8,37 @@
 const S = (w, h, inner) =>
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}">${inner}</svg>`;
 
-// 반짝이 별
-const spark = (x, y, r, o = 0.9) =>
-  `<g opacity="${o}"><path d="M${x} ${y - r}L${x + r * 0.28} ${y - r * 0.28} ${x + r} ${y} ${x + r * 0.28} ${y + r * 0.28} ${x} ${y + r} ${x - r * 0.28} ${y + r * 0.28} ${x - r} ${y} ${x - r * 0.28} ${y - r * 0.28}Z" fill="#fff"/></g>`;
+// 8면체 보석 컷 헬퍼
+const gemCut = (cx, cy, r, gId) => {
+  const n = 8;
+  const pts = Array.from({length: n * 2}, (_, i) => {
+    const a = -Math.PI / 2 + i * Math.PI / n;
+    const rad = i % 2 === 0 ? r : r * 0.58;
+    return `${(cx + rad * Math.cos(a)).toFixed(1)},${(cy + rad * Math.sin(a)).toFixed(1)}`;
+  }).join(' ');
+  const inner = Array.from({length: n}, (_, i) => {
+    const a = -Math.PI / 2 + (i + 0.5) * 2 * Math.PI / n;
+    return `${(cx + r * 0.58 * Math.cos(a)).toFixed(1)},${(cy + r * 0.58 * Math.sin(a)).toFixed(1)}`;
+  }).join(' ');
+  const lines = Array.from({length: n}, (_, i) => {
+    const a = -Math.PI / 2 + i * 2 * Math.PI / n;
+    return `<line x1="${cx}" y1="${cy}" x2="${(cx + r * Math.cos(a)).toFixed(1)}" y2="${(cy + r * Math.sin(a)).toFixed(1)}" stroke="rgba(255,255,255,0.38)" stroke-width="0.7"/>`;
+  }).join('');
+  return `<polygon points="${pts}" fill="url(#${gId})" stroke="rgba(255,255,255,0.65)" stroke-width="1.2"/>
+    <polygon points="${inner}" fill="rgba(255,255,255,0.11)"/>
+    ${lines}
+    <circle cx="${(cx - r*0.27).toFixed(1)}" cy="${(cy - r*0.27).toFixed(1)}" r="${(r*0.2).toFixed(1)}" fill="#fff" opacity="0.92"/>
+    <ellipse cx="${(cx + r*0.08).toFixed(1)}" cy="${(cy - r*0.1).toFixed(1)}" rx="${(r*0.13).toFixed(1)}" ry="${(r*0.08).toFixed(1)}" fill="#fff" opacity="0.58"/>`;
+};
 
-// 보석
-const gem = (id, x, y, r, c1, c2) =>
-  `<defs><radialGradient id="${id}" cx="0.35" cy="0.3" r="0.8">
-     <stop offset="0" stop-color="#fff"/><stop offset="0.4" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/>
-   </radialGradient></defs>
-   <circle cx="${x}" cy="${y}" r="${r}" fill="url(#${id})" stroke="#fff" stroke-opacity="0.6"/>
-   <circle cx="${x - r*0.3}" cy="${y - r*0.3}" r="${r*0.22}" fill="#fff" opacity="0.8"/>`;
-
-/* =========================================================
- *  베이스 공주 캐릭터 (viewBox 400 x 760)
- * ========================================================= */
-const PRINCESS_BODY = S(400, 760, `
-  <defs>
-    <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#ffe9da"/><stop offset="1" stop-color="#ffd3b8"/>
-    </linearGradient>
-    <radialGradient id="blush" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#ff9baa" stop-opacity="0.8"/><stop offset="1" stop-color="#ff9baa" stop-opacity="0"/>
-    </radialGradient>
-    <radialGradient id="iris" cx="0.5" cy="0.35" r="0.7">
-      <stop offset="0" stop-color="#b98cff"/><stop offset="0.55" stop-color="#7b56d6"/><stop offset="1" stop-color="#4f2f9e"/>
-    </radialGradient>
-    <linearGradient id="slip" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#fff6fb"/><stop offset="1" stop-color="#ffe3ef"/>
-    </linearGradient>
-  </defs>
-
-  <!-- 다리 -->
-  <path d="M186 430 C182 520 184 610 188 686 C189 706 173 708 170 688 C163 612 165 520 176 432 Z" fill="url(#skin)"/>
-  <path d="M214 430 C218 520 216 610 212 686 C211 706 227 708 230 688 C237 612 235 520 224 432 Z" fill="url(#skin)"/>
-  <!-- 발 -->
-  <path d="M170 686 C162 700 162 716 176 718 C190 719 192 705 188 690 Z" fill="url(#skin)"/>
-  <path d="M230 686 C238 700 238 716 224 718 C210 719 208 705 212 690 Z" fill="url(#skin)"/>
-
-  <!-- 팔 -->
-  <path d="M150 250 C132 300 124 360 130 410 C131 424 146 424 148 410 C152 360 164 300 174 262 Z" fill="url(#skin)"/>
-  <path d="M250 250 C268 300 276 360 270 410 C269 424 254 424 252 410 C248 360 236 300 226 262 Z" fill="url(#skin)"/>
-  <!-- 손 -->
-  <ellipse cx="139" cy="416" rx="13" ry="16" fill="url(#skin)"/>
-  <ellipse cx="261" cy="416" rx="13" ry="16" fill="url(#skin)"/>
-
-  <!-- 몸통(슬립) -->
-  <path d="M158 244 C148 252 146 300 150 342 C152 374 150 396 170 424 L230 424
-           C250 396 248 374 250 342 C254 300 252 252 242 244
-           C220 264 180 264 158 244 Z" fill="url(#slip)" stroke="#ffd0e2" stroke-width="2"/>
-  <path d="M168 248 C185 262 215 262 232 248 L228 300 C200 312 200 312 172 300 Z" fill="#ffd9e8" opacity="0.7"/>
-
-  <!-- 목 -->
-  <path d="M184 198 L216 198 L214 232 C200 240 200 240 186 232 Z" fill="url(#skin)"/>
-  <path d="M184 210 C200 224 200 224 216 210 L215 224 C200 234 200 234 185 224 Z" fill="#f0b89a" opacity="0.5"/>
-
-  <!-- 머리 -->
-  <ellipse cx="200" cy="130" rx="84" ry="92" fill="url(#skin)"/>
-  <ellipse cx="120" cy="142" rx="11" ry="15" fill="url(#skin)"/>
-  <ellipse cx="280" cy="142" rx="11" ry="15" fill="url(#skin)"/>
-
-  <!-- 볼터치 -->
-  <ellipse cx="150" cy="158" rx="20" ry="13" fill="url(#blush)"/>
-  <ellipse cx="250" cy="158" rx="20" ry="13" fill="url(#blush)"/>
-
-  <!-- 눈썹 -->
-  <path d="M152 105 Q168 99 183 104" stroke="#c89a6a" stroke-width="3.2" fill="none" stroke-linecap="round"/>
-  <path d="M217 104 Q232 99 248 105" stroke="#c89a6a" stroke-width="3.2" fill="none" stroke-linecap="round"/>
-
-  <!-- 눈 -->
-  <g>
-    <ellipse cx="166" cy="140" rx="20" ry="25" fill="#fff"/>
-    <ellipse cx="166" cy="142" rx="16" ry="21" fill="url(#iris)"/>
-    <circle cx="166" cy="144" r="8" fill="#2b1b4a"/>
-    <circle cx="160" cy="135" r="5" fill="#fff"/>
-    <circle cx="171" cy="150" r="3" fill="#fff" opacity="0.8"/>
-    <path d="M144 130 Q166 112 188 132" stroke="#3a2a24" stroke-width="5" fill="none" stroke-linecap="round"/>
-    <path d="M146 156 Q166 166 186 156" stroke="#cca" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.5"/>
-  </g>
-  <g>
-    <ellipse cx="234" cy="140" rx="20" ry="25" fill="#fff"/>
-    <ellipse cx="234" cy="142" rx="16" ry="21" fill="url(#iris)"/>
-    <circle cx="234" cy="144" r="8" fill="#2b1b4a"/>
-    <circle cx="228" cy="135" r="5" fill="#fff"/>
-    <circle cx="239" cy="150" r="3" fill="#fff" opacity="0.8"/>
-    <path d="M212 132 Q234 112 256 130" stroke="#3a2a24" stroke-width="5" fill="none" stroke-linecap="round"/>
-  </g>
-
-  <!-- 코 -->
-  <path d="M200 152 q4 7 -2 10" stroke="#e8a884" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-
-  <!-- 입 -->
-  <path d="M186 176 Q200 190 214 176 Q200 184 186 176 Z" fill="#e76a7e"/>
-  <path d="M188 177 Q200 186 212 177" stroke="#c84d63" stroke-width="2" fill="none" stroke-linecap="round"/>
-`);
+// 4포인트 반짝이 별
+const spark = (x, y, r, o = 0.9) => {
+  const pts = Array.from({length: 8}, (_, i) => {
+    const rad = i % 2 === 0 ? r : r * 0.28;
+    return `${(x + rad * Math.cos(i * Math.PI / 4 - Math.PI / 2)).toFixed(1)},${(y + rad * Math.sin(i * Math.PI / 4 - Math.PI / 2)).toFixed(1)}`;
+  }).join(' ');
+  return `<polygon points="${pts}" fill="#fff" opacity="${o}"/>`;
+};
 
 /* =========================================================
  *  아이템 빌더
@@ -120,204 +57,755 @@ function add(cat, name, vb, svg, anchor) {
 
 /* ---------- 헤어 ---------- */
 function hairLong(name, c1, c2, hi) {
-  const grad = `<defs><linearGradient id="hg${_uid}" x1="0" y1="0" x2="0.3" y2="1">
-    <stop offset="0" stop-color="${hi}"/><stop offset="0.4" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs>`;
-  const svg = S(320, 360, grad + `
-    <path d="M160 14 C84 14 52 78 52 150 C52 210 60 270 70 320 L96 300
-             C84 250 86 150 100 120 C120 150 200 150 220 120 C234 150 236 250 224 300 L250 320
-             C260 270 268 210 268 150 C268 78 236 14 160 14 Z" fill="url(#hg${_uid})"/>
-    <path d="M160 20 C112 20 84 52 78 96 C104 70 130 64 160 64 C190 64 216 70 242 96 C236 52 208 20 160 20 Z" fill="${hi}" opacity="0.6"/>
-    <path d="M70 320 C66 332 64 344 78 348 C92 350 96 336 92 322 Z" fill="url(#hg${_uid})"/>
-    <path d="M250 320 C254 332 256 344 242 348 C228 350 224 336 228 322 Z" fill="url(#hg${_uid})"/>
-    ${spark(110,70,5,0.5)} ${spark(220,80,4,0.4)}`);
-  add('hair', name, [320,360], svg, { cx:0.5, cy:0.205, aw:0.66, z:12 });
+  const d = _uid + 1;
+  const svg = S(320, 360, `
+    <defs>
+      <linearGradient id="${d}a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${hi}"/><stop offset="0.38" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
+      <linearGradient id="${d}b" x1="0.3" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${hi}" stop-opacity="0.85"/><stop offset="0.5" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
+      <radialGradient id="${d}c" cx="0.38" cy="0.2" r="0.62"><stop offset="0" stop-color="${hi}" stop-opacity="0.72"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}d" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c2}"/><stop offset="0.6" stop-color="${c2}" stop-opacity="0.5"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}e" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${c2}" stop-opacity="0.38"/><stop offset="0.5" stop-color="${c2}" stop-opacity="0"/><stop offset="1" stop-color="${c2}" stop-opacity="0.38"/></linearGradient>
+      <linearGradient id="${d}f" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${hi}" stop-opacity="0.55"/><stop offset="0.4" stop-color="${hi}" stop-opacity="0"/><stop offset="1" stop-color="${hi}" stop-opacity="0.55"/></linearGradient>
+      <linearGradient id="${d}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${hi}" stop-opacity="0.55"/><stop offset="1" stop-color="${hi}" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}h" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset="0.5" stop-color="#000" stop-opacity="0.08"/><stop offset="1" stop-color="#000" stop-opacity="0.22"/></linearGradient>
+      <radialGradient id="${d}i" cx="0.5" cy="0.1" r="0.52"><stop offset="0" stop-color="#000" stop-opacity="0.16"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}j" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${hi}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
+      <linearGradient id="${d}k" x1="0.2" y1="0" x2="0.8" y2="1"><stop offset="0" stop-color="${c1}" stop-opacity="0.55"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}l" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${hi}" stop-opacity="0.9"/><stop offset="0.5" stop-color="${hi}" stop-opacity="0.3"/><stop offset="1" stop-color="${hi}" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}m" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c2}" stop-opacity="0.5"/><stop offset="0.35" stop-color="${c2}" stop-opacity="0.2"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}n" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="${hi}" stop-opacity="0"/><stop offset="0.7" stop-color="${hi}" stop-opacity="0.1"/><stop offset="1" stop-color="${hi}" stop-opacity="0.32"/></radialGradient>
+      <linearGradient id="${d}o" x1="0.15" y1="0" x2="0.5" y2="1"><stop offset="0" stop-color="${hi}" stop-opacity="0.6"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></linearGradient>
+      <filter id="${d}f1"><feGaussianBlur stdDeviation="0.5"/></filter>
+      <filter id="${d}f2"><feGaussianBlur stdDeviation="1.8"/></filter>
+      <filter id="${d}f3"><feGaussianBlur stdDeviation="4"/></filter>
+    </defs>
+    <!-- depth glow -->
+    <path d="M160 14 C84 14 50 78 50 152 C50 214 58 272 68 322 L96 302 C84 252 84 152 98 120 C118 152 202 152 222 120 C236 152 236 252 224 302 L252 322 C262 272 270 214 270 152 C270 78 236 14 160 14 Z" fill="${c2}" filter="url(#${d}f3)" opacity="0.28"/>
+    <!-- Layer 1: base hair -->
+    <path d="M160 14 C84 14 50 78 50 152 C50 214 58 272 68 322 L96 302 C84 252 84 152 98 120 C118 152 202 152 222 120 C236 152 236 252 224 302 L252 322 C262 272 270 214 270 152 C270 78 236 14 160 14 Z" fill="url(#${d}a)"/>
+    <path d="M68 322 C64 334 62 348 76 352 C90 354 94 338 90 322 Z" fill="url(#${d}j)"/>
+    <path d="M252 322 C256 334 258 348 244 352 C230 354 226 338 230 322 Z" fill="url(#${d}j)"/>
+    <!-- Layer 2: deep fold shadows -->
+    <path d="M160 14 C84 14 50 78 50 152 C50 214 58 272 68 322 L96 302 C84 252 84 152 98 120 C118 152 202 152 222 120 C236 152 236 252 224 302 L252 322 C262 272 270 214 270 152 C270 78 236 14 160 14 Z" fill="url(#${d}h)" opacity="0.6"/>
+    <path d="M98 122 C91 180 90 248 90 302 L106 300 C104 246 105 178 108 126 Z" fill="url(#${d}m)" filter="url(#${d}f1)"/>
+    <path d="M222 122 C229 180 230 248 230 302 L214 300 C216 246 215 178 212 126 Z" fill="url(#${d}m)" filter="url(#${d}f1)"/>
+    <path d="M154 130 C150 192 149 256 150 305" stroke="${c2}" stroke-opacity="0.22" stroke-width="14" fill="none" filter="url(#${d}f2)"/>
+    <path d="M160 14 C84 14 50 78 50 152 C50 214 58 272 68 322 L96 302 C84 252 84 152 98 120 C118 152 202 152 222 120 C236 152 236 252 224 302 L252 322 C262 272 270 214 270 152 C270 78 236 14 160 14 Z" fill="url(#${d}i)" opacity="0.5"/>
+    <!-- Layer 3: fabric highlights -->
+    <path d="M160 20 C112 20 82 52 76 96 C102 70 130 64 160 64 C190 64 218 70 244 96 C238 52 208 20 160 20 Z" fill="${hi}" opacity="0.44"/>
+    <path d="M160 14 C84 14 50 78 50 152 C50 214 58 272 68 322 L96 302 C84 252 84 152 98 120 C118 152 202 152 222 120 C236 152 236 252 224 302 L252 322 C262 272 270 214 270 152 C270 78 236 14 160 14 Z" fill="url(#${d}c)" opacity="0.5"/>
+    <path d="M148 22 C138 82 136 188 138 302" stroke="${hi}" stroke-opacity="0.48" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M167 16 C162 85 162 192 164 308" stroke="${hi}" stroke-opacity="0.28" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+    <path d="M108 52 C104 122 102 222 104 300" stroke="${hi}" stroke-opacity="0.25" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M212 52 C216 122 218 222 216 300" stroke="${hi}" stroke-opacity="0.22" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M72 98 C68 162 68 242 72 290" stroke="${hi}" stroke-opacity="0.35" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <path d="M248 98 C252 162 252 242 248 290" stroke="${hi}" stroke-opacity="0.3" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <!-- Layer 4: rim light -->
+    <path d="M100 40 C130 26 190 26 220 40" stroke="${hi}" stroke-opacity="0.7" stroke-width="4" fill="none" stroke-linecap="round" filter="url(#${d}f2)"/>
+    <path d="M54 110 C52 165 52 232 56 280" stroke="${hi}" stroke-opacity="0.38" stroke-width="3" fill="none" stroke-linecap="round" filter="url(#${d}f1)"/>
+    <path d="M266 110 C268 165 268 232 264 280" stroke="${hi}" stroke-opacity="0.38" stroke-width="3" fill="none" stroke-linecap="round" filter="url(#${d}f1)"/>
+    ${spark(110,68,5.5,0.55)} ${spark(218,76,4.5,0.45)} ${spark(160,28,3.5,0.65)}`);
+  add('hair', name, [320,360], svg, {cx:0.5,cy:0.205,aw:0.66,z:12});
 }
+
 function hairTwin(name, c1, c2, hi) {
-  const grad = `<defs><linearGradient id="hg${_uid}" x1="0" y1="0" x2="0.3" y2="1">
-    <stop offset="0" stop-color="${hi}"/><stop offset="0.5" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs>`;
-  const svg = S(360, 380, grad + `
-    <path d="M180 16 C108 16 76 76 76 144 C76 180 82 214 90 240 L112 230
-             C102 200 104 150 118 124 C140 152 220 152 242 124 C256 150 258 200 248 230 L270 240
-             C278 214 284 180 284 144 C284 76 252 16 180 16 Z" fill="url(#hg${_uid})"/>
-    <ellipse cx="70" cy="250" rx="36" ry="62" fill="url(#hg${_uid})"/>
-    <ellipse cx="290" cy="250" rx="36" ry="62" fill="url(#hg${_uid})"/>
-    <circle cx="70" cy="196" r="15" fill="#ff5d9e"/><circle cx="290" cy="196" r="15" fill="#ff5d9e"/>
-    <circle cx="65" cy="191" r="5" fill="#fff" opacity="0.8"/><circle cx="285" cy="191" r="5" fill="#fff" opacity="0.8"/>
-    <path d="M180 22 C132 22 104 54 98 98 C124 72 150 66 180 66 C210 66 236 72 262 98 C256 54 228 22 180 22 Z" fill="${hi}" opacity="0.55"/>`);
-  add('hair', name, [360,380], svg, { cx:0.5, cy:0.22, aw:0.78, z:12 });
+  const d = _uid + 1;
+  const svg = S(360, 380, `
+    <defs>
+      <linearGradient id="${d}a" x1="0" y1="0" x2="0.5" y2="1"><stop offset="0" stop-color="${hi}"/><stop offset="0.4" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
+      <radialGradient id="${d}b" cx="0.38" cy="0.32" r="0.72"><stop offset="0" stop-color="${hi}"/><stop offset="0.48" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></radialGradient>
+      <linearGradient id="${d}c" x1="0.3" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${hi}" stop-opacity="0.8"/><stop offset="0.5" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
+      <linearGradient id="${d}d" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset="0.5" stop-color="#000" stop-opacity="0.08"/><stop offset="1" stop-color="#000" stop-opacity="0.22"/></linearGradient>
+      <radialGradient id="${d}e" cx="0.5" cy="0.1" r="0.52"><stop offset="0" stop-color="#000" stop-opacity="0.16"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}f" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${c2}" stop-opacity="0.38"/><stop offset="0.5" stop-color="${c2}" stop-opacity="0"/><stop offset="1" stop-color="${c2}" stop-opacity="0.38"/></linearGradient>
+      <radialGradient id="${d}g" cx="0.38" cy="0.2" r="0.62"><stop offset="0" stop-color="${hi}" stop-opacity="0.7"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}h" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${hi}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
+      <linearGradient id="${d}i" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c2}" stop-opacity="0.5"/><stop offset="0.35" stop-color="${c2}" stop-opacity="0.2"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}j" cx="0.35" cy="0.35" r="0.65"><stop offset="0" stop-color="${hi}" stop-opacity="0.6"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}k" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${hi}" stop-opacity="0.55"/><stop offset="1" stop-color="${hi}" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}l" x1="0.2" y1="0" x2="0.8" y2="1"><stop offset="0" stop-color="${c1}" stop-opacity="0.5"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}m" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="${hi}" stop-opacity="0"/><stop offset="0.7" stop-color="${hi}" stop-opacity="0.1"/><stop offset="1" stop-color="${hi}" stop-opacity="0.32"/></radialGradient>
+      <linearGradient id="${d}n" x1="0.15" y1="0" x2="0.5" y2="1"><stop offset="0" stop-color="${hi}" stop-opacity="0.6"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}o" cx="0.5" cy="0.3" r="0.7"><stop offset="0" stop-color="#ff5d9e" stop-opacity="0.8"/><stop offset="1" stop-color="#c01e6e" stop-opacity="0"/></radialGradient>
+      <filter id="${d}f1"><feGaussianBlur stdDeviation="0.7"/></filter>
+      <filter id="${d}f2"><feGaussianBlur stdDeviation="2"/></filter>
+      <filter id="${d}f3"><feGaussianBlur stdDeviation="4.5"/></filter>
+    </defs>
+    <!-- depth glow -->
+    <path d="M180 16 C108 16 74 78 74 146 C74 182 80 218 88 242 L112 232 C102 202 102 152 116 126 C138 154 222 154 244 126 C258 152 258 202 248 232 L272 242 C280 218 286 182 286 146 C286 78 252 16 180 16 Z" fill="${c2}" filter="url(#${d}f3)" opacity="0.3"/>
+    <!-- Layer 1: base -->
+    <path d="M180 16 C108 16 74 78 74 146 C74 182 80 218 88 242 L112 232 C102 202 102 152 116 126 C138 154 222 154 244 126 C258 152 258 202 248 232 L272 242 C280 218 286 182 286 146 C286 78 252 16 180 16 Z" fill="url(#${d}a)"/>
+    <ellipse cx="68" cy="268" rx="38" ry="66" fill="url(#${d}a)"/>
+    <ellipse cx="292" cy="268" rx="38" ry="66" fill="url(#${d}a)"/>
+    <!-- Layer 2: deep fold shadows -->
+    <path d="M180 16 C108 16 74 78 74 146 C74 182 80 218 88 242 L112 232 C102 202 102 152 116 126 C138 154 222 154 244 126 C258 152 258 202 248 232 L272 242 C280 218 286 182 286 146 C286 78 252 16 180 16 Z" fill="url(#${d}d)" opacity="0.6"/>
+    <ellipse cx="68" cy="268" rx="38" ry="66" fill="url(#${d}d)" opacity="0.5"/>
+    <ellipse cx="292" cy="268" rx="38" ry="66" fill="url(#${d}d)" opacity="0.5"/>
+    <ellipse cx="54" cy="268" rx="12" ry="52" fill="${c2}" opacity="0.28" filter="url(#${d}f1)"/>
+    <ellipse cx="306" cy="268" rx="12" ry="52" fill="${c2}" opacity="0.28" filter="url(#${d}f1)"/>
+    <path d="M116 126 C110 178 108 218 110 232" stroke="${c2}" stroke-opacity="0.3" stroke-width="10" fill="none" filter="url(#${d}f1)"/>
+    <path d="M244 126 C250 178 252 218 250 232" stroke="${c2}" stroke-opacity="0.3" stroke-width="10" fill="none" filter="url(#${d}f1)"/>
+    <!-- hair ties -->
+    <circle cx="68" cy="202" r="16" fill="#ff5d9e"/>
+    <circle cx="292" cy="202" r="16" fill="#ff5d9e"/>
+    <circle cx="68" cy="202" r="16" fill="url(#${d}o)" opacity="0.7"/>
+    <circle cx="63" cy="197" r="6" fill="#fff" opacity="0.75"/>
+    <circle cx="287" cy="197" r="6" fill="#fff" opacity="0.75"/>
+    <!-- Layer 3: highlights -->
+    <path d="M180 22 C132 22 102 54 96 98 C122 72 150 66 180 66 C210 66 238 72 264 98 C258 54 228 22 180 22 Z" fill="${hi}" opacity="0.46"/>
+    <path d="M180 16 C108 16 74 78 74 146 C74 182 80 218 88 242 L112 232 C102 202 102 152 116 126 C138 154 222 154 244 126 C258 152 258 202 248 232 L272 242 C280 218 286 182 286 146 C286 78 252 16 180 16 Z" fill="url(#${d}g)" opacity="0.5"/>
+    <path d="M62 210 C60 252 62 302 68 332" stroke="${hi}" stroke-opacity="0.48" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M298 210 C300 252 298 302 292 332" stroke="${hi}" stroke-opacity="0.48" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M166 18 C160 82 160 162 162 225" stroke="${hi}" stroke-opacity="0.42" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <!-- Layer 4: rim light -->
+    <path d="M110 42 C140 28 220 28 250 42" stroke="${hi}" stroke-opacity="0.68" stroke-width="3.5" fill="none" stroke-linecap="round" filter="url(#${d}f2)"/>
+    <path d="M38 120 C36 175 38 235 42 275" stroke="${hi}" stroke-opacity="0.36" stroke-width="3" fill="none" stroke-linecap="round" filter="url(#${d}f1)"/>
+    <path d="M322 120 C324 175 322 235 318 275" stroke="${hi}" stroke-opacity="0.36" stroke-width="3" fill="none" stroke-linecap="round" filter="url(#${d}f1)"/>
+    ${spark(110,66,5.5,0.5)} ${spark(250,74,4.5,0.45)} ${spark(180,28,3.5,0.65)}`);
+  add('hair', name, [360,380], svg, {cx:0.5,cy:0.22,aw:0.78,z:12});
 }
+
 function hairBun(name, c1, c2, hi) {
-  const grad = `<defs><linearGradient id="hg${_uid}" x1="0" y1="0" x2="0.3" y2="1">
-    <stop offset="0" stop-color="${hi}"/><stop offset="0.5" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs>`;
-  const svg = S(320, 300, grad + `
-    <circle cx="160" cy="40" r="34" fill="url(#hg${_uid})"/>
-    <path d="M160 26 C92 26 64 84 64 150 C64 186 70 214 80 236 L104 224
-             C94 196 96 150 110 126 C132 152 188 152 210 126 C224 150 226 196 216 224 L240 236
-             C250 214 256 186 256 150 C256 84 228 26 160 26 Z" fill="url(#hg${_uid})"/>
-    <path d="M160 32 C118 32 92 60 86 100 C112 76 136 70 160 70 C184 70 208 76 234 100 C228 60 202 32 160 32 Z" fill="${hi}" opacity="0.55"/>
-    ${spark(130,60,5)} ${spark(196,70,4,0.6)}`);
-  add('hair', name, [320,300], svg, { cx:0.5, cy:0.18, aw:0.66, z:12 });
+  const d = _uid + 1;
+  const svg = S(320, 300, `
+    <defs>
+      <linearGradient id="${d}a" x1="0" y1="0" x2="0.4" y2="1"><stop offset="0" stop-color="${hi}"/><stop offset="0.4" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
+      <radialGradient id="${d}b" cx="0.38" cy="0.32" r="0.72"><stop offset="0" stop-color="${hi}"/><stop offset="0.45" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></radialGradient>
+      <radialGradient id="${d}c" cx="0.3" cy="0.25" r="0.65"><stop offset="0" stop-color="${hi}" stop-opacity="0.75"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}d" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset="0.5" stop-color="#000" stop-opacity="0.08"/><stop offset="1" stop-color="#000" stop-opacity="0.22"/></linearGradient>
+      <radialGradient id="${d}e" cx="0.5" cy="0.1" r="0.52"><stop offset="0" stop-color="#000" stop-opacity="0.16"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}f" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${c2}" stop-opacity="0.38"/><stop offset="0.5" stop-color="${c2}" stop-opacity="0"/><stop offset="1" stop-color="${c2}" stop-opacity="0.38"/></linearGradient>
+      <radialGradient id="${d}g" cx="0.35" cy="0.35" r="0.65"><stop offset="0" stop-color="${hi}" stop-opacity="0.6"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}h" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${hi}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
+      <linearGradient id="${d}i" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c2}" stop-opacity="0.5"/><stop offset="0.35" stop-color="${c2}" stop-opacity="0.2"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}j" cx="0.38" cy="0.3" r="0.7"><stop offset="0" stop-color="#000" stop-opacity="0.12"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}k" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${hi}" stop-opacity="0.7"/><stop offset="0.5" stop-color="${hi}" stop-opacity="0.25"/><stop offset="1" stop-color="${hi}" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}l" x1="0.2" y1="0" x2="0.8" y2="1"><stop offset="0" stop-color="${c1}" stop-opacity="0.55"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}m" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="${hi}" stop-opacity="0"/><stop offset="0.7" stop-color="${hi}" stop-opacity="0.1"/><stop offset="1" stop-color="${hi}" stop-opacity="0.32"/></radialGradient>
+      <linearGradient id="${d}n" x1="0.15" y1="0" x2="0.5" y2="1"><stop offset="0" stop-color="${hi}" stop-opacity="0.6"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}o" cx="0.5" cy="0.4" r="0.6"><stop offset="0" stop-color="${hi}" stop-opacity="0.6"/><stop offset="0.5" stop-color="${c1}" stop-opacity="0.1"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></radialGradient>
+      <filter id="${d}f1"><feGaussianBlur stdDeviation="0.8"/></filter>
+      <filter id="${d}f2"><feGaussianBlur stdDeviation="2.2"/></filter>
+      <filter id="${d}f3"><feGaussianBlur stdDeviation="5"/></filter>
+    </defs>
+    <!-- depth -->
+    <circle cx="160" cy="42" r="40" fill="${c2}" filter="url(#${d}f3)" opacity="0.28"/>
+    <path d="M160 28 C92 28 62 86 62 152 C62 188 68 218 78 238 L102 226 C92 198 94 152 108 128 C130 154 190 154 212 128 C226 152 228 198 218 226 L242 238 C252 218 258 188 258 152 C258 86 228 28 160 28 Z" fill="${c2}" filter="url(#${d}f3)" opacity="0.22"/>
+    <!-- Layer 1: base body hair -->
+    <path d="M160 28 C92 28 62 86 62 152 C62 188 68 218 78 238 L102 226 C92 198 94 152 108 128 C130 154 190 154 212 128 C226 152 228 198 218 226 L242 238 C252 218 258 188 258 152 C258 86 228 28 160 28 Z" fill="url(#${d}a)"/>
+    <!-- bun -->
+    <circle cx="160" cy="42" r="36" fill="url(#${d}b)"/>
+    <!-- Layer 2: deep fold shadows -->
+    <path d="M160 28 C92 28 62 86 62 152 C62 188 68 218 78 238 L102 226 C92 198 94 152 108 128 C130 154 190 154 212 128 C226 152 228 198 218 226 L242 238 C252 218 258 188 258 152 C258 86 228 28 160 28 Z" fill="url(#${d}d)" opacity="0.6"/>
+    <circle cx="160" cy="42" r="36" fill="url(#${d}j)" opacity="0.6"/>
+    <path d="M108 128 C102 178 100 215 100 226" stroke="${c2}" stroke-opacity="0.3" stroke-width="10" fill="none" filter="url(#${d}f1)"/>
+    <path d="M212 128 C218 178 220 215 220 226" stroke="${c2}" stroke-opacity="0.3" stroke-width="10" fill="none" filter="url(#${d}f1)"/>
+    <!-- bun spiral grooves -->
+    <path d="M160 14 C172 16 180 24 180 36 C180 48 170 55 160 55 C150 55 142 48 142 38" stroke="${c2}" stroke-opacity="0.32" stroke-width="2.5" fill="none" filter="url(#${d}f1)"/>
+    <path d="M148 18 C138 24 132 34 134 44" stroke="${c2}" stroke-opacity="0.24" stroke-width="2" fill="none" filter="url(#${d}f1)"/>
+    <!-- Layer 3: fabric highlights -->
+    <path d="M160 34 C118 34 92 62 86 102 C112 78 136 72 160 72 C184 72 208 78 234 102 C228 62 202 34 160 34 Z" fill="${hi}" opacity="0.43"/>
+    <path d="M160 28 C92 28 62 86 62 152 C62 188 68 218 78 238 L102 226 C92 198 94 152 108 128 C130 154 190 154 212 128 C226 152 228 198 218 226 L242 238 C252 218 258 188 258 152 C258 86 228 28 160 28 Z" fill="url(#${d}c)" opacity="0.5"/>
+    <!-- bun highlight -->
+    <circle cx="148" cy="30" r="15" fill="${hi}" opacity="0.44"/>
+    <circle cx="160" cy="42" r="36" fill="url(#${d}o)" opacity="0.7"/>
+    <!-- strand highlights -->
+    <path d="M148 32 C138 92 136 182 138 226" stroke="${hi}" stroke-opacity="0.42" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M108 62 C104 124 102 196 104 226" stroke="${hi}" stroke-opacity="0.24" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <!-- Layer 4: rim light -->
+    <path d="M128 18 C144 10 176 10 192 18" stroke="${hi}" stroke-opacity="0.72" stroke-width="3.5" fill="none" stroke-linecap="round" filter="url(#${d}f2)"/>
+    <path d="M66 88 C62 145 62 210 66 232" stroke="${hi}" stroke-opacity="0.36" stroke-width="3" fill="none" stroke-linecap="round" filter="url(#${d}f1)"/>
+    <path d="M254 88 C258 145 258 210 254 232" stroke="${hi}" stroke-opacity="0.36" stroke-width="3" fill="none" stroke-linecap="round" filter="url(#${d}f1)"/>
+    ${spark(132,58,5.5,0.6)} ${spark(196,70,4.5,0.55)} ${spark(160,16,3.5,0.68)}`);
+  add('hair', name, [320,300], svg, {cx:0.5,cy:0.18,aw:0.66,z:12});
 }
 
 /* ---------- 드레스 (볼가운) ---------- */
-function gown(name, c1, c2, trim, gemc1, gemc2) {
-  const id = _uid + 1;
+function gown(name, c1, c2, trim, gc1, gc2) {
+  const d = _uid + 1;
   const svg = S(340, 380, `
     <defs>
-      <linearGradient id="bd${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
-      <linearGradient id="sk${id}" x1="0.2" y1="0" x2="0.8" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="0.5" stop-color="${c2}"/><stop offset="1" stop-color="${c1}"/></linearGradient>
+      <linearGradient id="${d}a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="0.45" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
+      <linearGradient id="${d}b" x1="0.15" y1="0" x2="0.5" y2="1"><stop offset="0" stop-color="${trim}" stop-opacity="0.9"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}c" cx="0.3" cy="0.2" r="0.7"><stop offset="0" stop-color="#fff" stop-opacity="0.42"/><stop offset="0.5" stop-color="${c1}" stop-opacity="0.1"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}d" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${c2}" stop-opacity="0.35"/><stop offset="0.5" stop-color="${c2}" stop-opacity="0"/><stop offset="1" stop-color="${c2}" stop-opacity="0.35"/></linearGradient>
+      <radialGradient id="${d}e" cx="0.5" cy="0.35" r="0.7"><stop offset="0" stop-color="#fff" stop-opacity="0.35"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="0.4" stop-color="${c2}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
+      <linearGradient id="${d}g" x1="0.18" y1="0" x2="0.82" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="0.38" stop-color="${c2}"/><stop offset="0.78" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
+      <linearGradient id="${d}h" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.28"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}i" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c2}" stop-opacity="0.4"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}j" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.32"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}k" x1="0.5" y1="0" x2="0.5" y2="1"><stop offset="0" stop-color="${c2}" stop-opacity="0.32"/><stop offset="0.5" stop-color="${c2}" stop-opacity="0.1"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}l" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${trim}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
+      <radialGradient id="${d}m" cx="0.35" cy="0.3" r="0.8"><stop offset="0" stop-color="#fff"/><stop offset="0.45" stop-color="${gc1}"/><stop offset="1" stop-color="${gc2}"/></radialGradient>
+      <radialGradient id="${d}n" cx="0.5" cy="0.82" r="0.6"><stop offset="0" stop-color="#000" stop-opacity="0.18"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}o" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${trim}" stop-opacity="0.65"/><stop offset="1" stop-color="${trim}" stop-opacity="0"/></linearGradient>
+      <filter id="${d}f1"><feGaussianBlur stdDeviation="0.6"/></filter>
+      <filter id="${d}f2"><feGaussianBlur stdDeviation="2.2"/></filter>
+      <filter id="${d}f3"><feGaussianBlur stdDeviation="5.5"/></filter>
     </defs>
-    <!-- 어깨 퍼프 -->
-    <ellipse cx="116" cy="60" rx="30" ry="26" fill="url(#bd${id})"/>
-    <ellipse cx="224" cy="60" rx="30" ry="26" fill="url(#bd${id})"/>
-    <!-- 보디스 -->
-    <path d="M112 44 Q170 74 228 44 L222 150 Q170 172 118 150 Z" fill="url(#bd${id})" stroke="${trim}" stroke-width="2"/>
-    <path d="M112 44 Q170 74 228 44 L226 60 Q170 88 114 60 Z" fill="#fff" opacity="0.25"/>
-    <!-- 스커트 -->
-    <path d="M118 150 Q170 168 222 150 L324 348 Q170 388 16 348 Z" fill="url(#sk${id})" stroke="${trim}" stroke-width="2"/>
-    <!-- 세로 음영 -->
-    <path d="M150 156 L120 346" stroke="#000" stroke-opacity="0.06" stroke-width="14"/>
-    <path d="M210 156 L300 330" stroke="#fff" stroke-opacity="0.18" stroke-width="10"/>
-    <path d="M170 168 L170 380" stroke="#fff" stroke-opacity="0.12" stroke-width="8"/>
-    <!-- 레이스 단 -->
-    <g fill="${trim}">
-      ${Array.from({length:11},(_,i)=>{const x=26+i*27.6;return `<circle cx="${x}" cy="${346-(i%2?6:0)}" r="13"/>`;}).join('')}
+    <!-- depth glow -->
+    <path d="M118 152 Q170 170 222 152 L326 354 Q170 394 14 354 Z" fill="${c2}" filter="url(#${d}f3)" opacity="0.3"/>
+    <!-- Layer 1: base fabric -->
+    <ellipse cx="116" cy="60" rx="32" ry="28" fill="url(#${d}a)"/>
+    <ellipse cx="224" cy="60" rx="32" ry="28" fill="url(#${d}a)"/>
+    <path d="M112 44 Q170 76 228 44 L222 152 Q170 174 118 152 Z" fill="url(#${d}a)" stroke="${trim}" stroke-width="1.5"/>
+    <path d="M118 152 Q170 170 222 152 L326 354 Q170 394 14 354 Z" fill="url(#${d}g)" stroke="${trim}" stroke-width="1.5"/>
+    <!-- Layer 2: deep fold shadows -->
+    <path d="M118 152 Q170 170 222 152 L326 354 Q170 394 14 354 Z" fill="url(#${d}n)" opacity="0.7"/>
+    <path d="M145 158 L80 350" stroke="${c2}" stroke-opacity="0.28" stroke-width="20" fill="none" stroke-linecap="round" filter="url(#${d}f2)"/>
+    <path d="M170 168 L170 382" stroke="${c2}" stroke-opacity="0.18" stroke-width="14" fill="none" stroke-linecap="round" filter="url(#${d}f2)"/>
+    <path d="M212 158 L292 340" stroke="${c2}" stroke-opacity="0.22" stroke-width="18" fill="none" stroke-linecap="round" filter="url(#${d}f2)"/>
+    <path d="M112 44 Q170 76 228 44 L222 152 Q170 174 118 152 Z" fill="url(#${d}d)" opacity="0.6"/>
+    <ellipse cx="100" cy="72" rx="14" ry="20" fill="${c2}" opacity="0.28" filter="url(#${d}f1)"/>
+    <ellipse cx="240" cy="72" rx="14" ry="20" fill="${c2}" opacity="0.28" filter="url(#${d}f1)"/>
+    <!-- Layer 3: fabric highlights -->
+    <path d="M112 44 Q170 76 228 44 L226 62 Q170 90 114 62 Z" fill="#fff" opacity="0.22"/>
+    <path d="M112 44 Q170 76 228 44 L222 152 Q170 174 118 152 Z" fill="url(#${d}c)" opacity="0.8"/>
+    <ellipse cx="108" cy="52" rx="14" ry="10" fill="#fff" opacity="0.28"/>
+    <ellipse cx="232" cy="52" rx="14" ry="10" fill="#fff" opacity="0.28"/>
+    <path d="M200 162 L312 348" stroke="#fff" stroke-opacity="0.18" stroke-width="18" fill="none" stroke-linecap="round" filter="url(#${d}f2)"/>
+    <path d="M210 165 L312 348" stroke="#fff" stroke-opacity="0.12" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <path d="M118 152 Q170 170 222 152 L326 354 Q170 394 14 354 Z" fill="url(#${d}h)" opacity="0.4"/>
+    <!-- bodice boning detail -->
+    <path d="M155 65 L152 148" stroke="${trim}" stroke-opacity="0.36" stroke-width="1.5" fill="none"/>
+    <path d="M170 68 L170 150" stroke="${trim}" stroke-opacity="0.3" stroke-width="1.5" fill="none"/>
+    <path d="M185 65 L188 148" stroke="${trim}" stroke-opacity="0.36" stroke-width="1.5" fill="none"/>
+    <!-- Layer 4: rim light -->
+    <path d="M112 46 Q170 28 228 46" stroke="#fff" stroke-opacity="0.52" stroke-width="3" fill="none" stroke-linecap="round" filter="url(#${d}f1)"/>
+    <!-- waist sash -->
+    <path d="M120 150 Q170 168 220 150 L218 163 Q170 181 122 163 Z" fill="url(#${d}l)"/>
+    <!-- lace ruffle hem -->
+    <g fill="${trim}" opacity="0.9">
+      ${Array.from({length:13},(_, i)=>`<circle cx="${(18+i*23.5).toFixed(1)}" cy="${352-(i%2?5:0)}" r="11"/>`).join('')}
     </g>
-    <!-- 허리 새시 + 보석 -->
-    <path d="M120 148 Q170 166 220 148 L218 162 Q170 180 122 162 Z" fill="${trim}"/>
-    ${gem('gm'+id,170,156,11,gemc1,gemc2)}
-    ${spark(90,250,6)} ${spark(260,210,5,0.7)} ${spark(170,300,5,0.6)} ${spark(300,300,4,0.5)}`);
-  add('dress', name, [340,380], svg, { cx:0.5, cy:0.565, aw:1.06, z:24 });
+    <path d="M14 354 Q170 394 326 354" stroke="${trim}" stroke-opacity="0.5" stroke-width="2" fill="none"/>
+    <!-- waist gem 8-facet -->
+    ${gemCut(170, 157, 12, `${d}m`)}
+    ${spark(80,250,6.5,0.62)} ${spark(272,212,5.5,0.5)} ${spark(170,302,5.5,0.55)} ${spark(302,310,4,0.46)}`);
+  add('dress', name, [340,380], svg, {cx:0.5,cy:0.565,aw:1.06,z:24});
 }
 
 /* ---------- 상의 ---------- */
 function topPiece(name, c1, c2, trim) {
-  const id=_uid+1;
+  const d = _uid + 1;
   const svg = S(240, 200, `
-    <defs><linearGradient id="tp${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs>
-    <ellipse cx="64" cy="60" rx="26" ry="22" fill="url(#tp${id})"/>
-    <ellipse cx="176" cy="60" rx="26" ry="22" fill="url(#tp${id})"/>
-    <path d="M66 46 Q120 76 174 46 L168 176 Q120 196 72 176 Z" fill="url(#tp${id})" stroke="${trim}" stroke-width="2"/>
-    <path d="M66 46 Q120 76 174 46 L172 64 Q120 90 68 64 Z" fill="#fff" opacity="0.25"/>
-    <path d="M120 70 L120 188" stroke="#fff" stroke-opacity="0.18" stroke-width="6"/>
-    ${spark(90,120,5,0.6)} ${spark(160,140,4,0.5)}`);
-  add('top', name, [240,200], svg, { cx:0.5, cy:0.40, aw:0.56, z:30 });
+    <defs>
+      <linearGradient id="${d}a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="0.45" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
+      <radialGradient id="${d}b" cx="0.3" cy="0.22" r="0.7"><stop offset="0" stop-color="#fff" stop-opacity="0.42"/><stop offset="0.5" stop-color="${c1}" stop-opacity="0.1"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}c" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${c2}" stop-opacity="0.36"/><stop offset="0.5" stop-color="${c2}" stop-opacity="0"/><stop offset="1" stop-color="${c2}" stop-opacity="0.36"/></linearGradient>
+      <linearGradient id="${d}d" x1="0.15" y1="0" x2="0.5" y2="1"><stop offset="0" stop-color="${trim}" stop-opacity="0.9"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}e" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.28"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}f" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c2}" stop-opacity="0.38"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}g" cx="0.5" cy="0.36" r="0.7"><stop offset="0" stop-color="#fff" stop-opacity="0.34"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}h" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.3"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}i" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c2}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
+      <radialGradient id="${d}j" cx="0.5" cy="0.85" r="0.58"><stop offset="0" stop-color="#000" stop-opacity="0.16"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}k" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${trim}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
+      <radialGradient id="${d}l" cx="0.38" cy="0.2" r="0.65"><stop offset="0" stop-color="#fff" stop-opacity="0.55"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}m" x1="0.5" y1="0" x2="0.5" y2="1"><stop offset="0" stop-color="${c2}" stop-opacity="0.28"/><stop offset="0.5" stop-color="${c2}" stop-opacity="0.1"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}n" cx="0.35" cy="0.3" r="0.8"><stop offset="0" stop-color="#fff"/><stop offset="0.45" stop-color="${trim}"/><stop offset="1" stop-color="${c2}"/></radialGradient>
+      <linearGradient id="${d}o" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${trim}" stop-opacity="0.6"/><stop offset="0.5" stop-color="${trim}" stop-opacity="0"/><stop offset="1" stop-color="${trim}" stop-opacity="0.6"/></linearGradient>
+      <filter id="${d}f1"><feGaussianBlur stdDeviation="0.6"/></filter>
+      <filter id="${d}f2"><feGaussianBlur stdDeviation="2"/></filter>
+      <filter id="${d}f3"><feGaussianBlur stdDeviation="4.5"/></filter>
+    </defs>
+    <!-- depth -->
+    <path d="M66 46 Q120 76 174 46 L168 176 Q120 196 72 176 Z" fill="${c2}" filter="url(#${d}f3)" opacity="0.28"/>
+    <!-- Layer 1: base -->
+    <ellipse cx="64" cy="60" rx="27" ry="23" fill="url(#${d}a)"/>
+    <ellipse cx="176" cy="60" rx="27" ry="23" fill="url(#${d}a)"/>
+    <path d="M66 46 Q120 76 174 46 L168 176 Q120 196 72 176 Z" fill="url(#${d}a)" stroke="${trim}" stroke-width="2"/>
+    <!-- Layer 2: deep fold shadows -->
+    <path d="M66 46 Q120 76 174 46 L168 176 Q120 196 72 176 Z" fill="url(#${d}j)" opacity="0.7"/>
+    <path d="M66 46 Q120 76 174 46 L168 176 Q120 196 72 176 Z" fill="url(#${d}c)" opacity="0.55"/>
+    <ellipse cx="52" cy="72" rx="12" ry="17" fill="${c2}" opacity="0.26" filter="url(#${d}f1)"/>
+    <ellipse cx="188" cy="72" rx="12" ry="17" fill="${c2}" opacity="0.26" filter="url(#${d}f1)"/>
+    <path d="M115 80 L112 180" stroke="${c2}" stroke-opacity="0.18" stroke-width="12" fill="none" filter="url(#${d}f2)"/>
+    <!-- Layer 3: highlights -->
+    <path d="M66 46 Q120 76 174 46 L172 64 Q120 90 68 64 Z" fill="#fff" opacity="0.22"/>
+    <path d="M66 46 Q120 76 174 46 L168 176 Q120 196 72 176 Z" fill="url(#${d}b)" opacity="0.8"/>
+    <ellipse cx="56" cy="52" rx="12" ry="9" fill="#fff" opacity="0.26"/>
+    <ellipse cx="184" cy="52" rx="12" ry="9" fill="#fff" opacity="0.26"/>
+    <path d="M138 54 L142 180" stroke="#fff" stroke-opacity="0.18" stroke-width="8" fill="none" stroke-linecap="round" filter="url(#${d}f2)"/>
+    <path d="M66 46 Q120 76 174 46 L168 176 Q120 196 72 176 Z" fill="url(#${d}e)" opacity="0.4"/>
+    <!-- boning details -->
+    <path d="M109 68 L107 180" stroke="${trim}" stroke-opacity="0.34" stroke-width="1.5" fill="none"/>
+    <path d="M120 70 L120 182" stroke="${trim}" stroke-opacity="0.28" stroke-width="1.5" fill="none"/>
+    <path d="M131 68 L133 180" stroke="${trim}" stroke-opacity="0.34" stroke-width="1.5" fill="none"/>
+    <!-- Layer 4: rim light -->
+    <path d="M66 48 Q120 30 174 48" stroke="#fff" stroke-opacity="0.52" stroke-width="3" fill="none" stroke-linecap="round" filter="url(#${d}f1)"/>
+    <!-- waist trim band -->
+    <path d="M72 174 Q120 190 168 174 L166 184 Q120 200 74 184 Z" fill="url(#${d}k)"/>
+    <!-- waist gem -->
+    ${gemCut(120, 179, 8, `${d}n`)}
+    ${spark(90,118,5.5,0.6)} ${spark(158,138,4.5,0.5)}`);
+  add('top', name, [240,200], svg, {cx:0.5,cy:0.40,aw:0.56,z:30});
 }
 
 /* ---------- 하의 (스커트) ---------- */
 function skirtPiece(name, c1, c2, trim) {
-  const id=_uid+1;
+  const d = _uid + 1;
   const svg = S(300, 240, `
-    <defs><linearGradient id="sp${id}" x1="0.2" y1="0" x2="0.8" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="0.5" stop-color="${c2}"/><stop offset="1" stop-color="${c1}"/></linearGradient></defs>
-    <path d="M108 16 Q150 30 192 16 L284 214 Q150 250 16 214 Z" fill="url(#sp${id})" stroke="${trim}" stroke-width="2"/>
-    <path d="M108 16 Q150 30 192 16 L190 34 Q150 48 110 34 Z" fill="${trim}"/>
-    <path d="M150 26 L150 244" stroke="#fff" stroke-opacity="0.16" stroke-width="7"/>
-    <path d="M120 24 L70 210" stroke="#000" stroke-opacity="0.05" stroke-width="12"/>
-    <g fill="${trim}">${Array.from({length:9},(_,i)=>{const x=24+i*31.5;return `<circle cx="${x}" cy="${212-(i%2?5:0)}" r="11"/>`;}).join('')}</g>
-    ${spark(110,150,5,0.5)}`);
-  add('bottom', name, [300,240], svg, { cx:0.5, cy:0.625, aw:0.74, z:20 });
+    <defs>
+      <linearGradient id="${d}a" x1="0.18" y1="0" x2="0.82" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="0.38" stop-color="${c2}"/><stop offset="0.78" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
+      <linearGradient id="${d}b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="0.45" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
+      <radialGradient id="${d}c" cx="0.3" cy="0.2" r="0.7"><stop offset="0" stop-color="#fff" stop-opacity="0.4"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}d" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${c2}" stop-opacity="0.36"/><stop offset="0.5" stop-color="${c2}" stop-opacity="0"/><stop offset="1" stop-color="${c2}" stop-opacity="0.36"/></linearGradient>
+      <linearGradient id="${d}e" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.28"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}f" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c2}" stop-opacity="0.38"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}g" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.3"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}h" cx="0.5" cy="0.88" r="0.58"><stop offset="0" stop-color="#000" stop-opacity="0.16"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}i" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${trim}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
+      <linearGradient id="${d}j" x1="0.5" y1="0" x2="0.5" y2="1"><stop offset="0" stop-color="${c2}" stop-opacity="0.3"/><stop offset="0.5" stop-color="${c2}" stop-opacity="0.1"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}k" cx="0.38" cy="0.22" r="0.65"><stop offset="0" stop-color="#fff" stop-opacity="0.5"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}l" x1="0.15" y1="0" x2="0.5" y2="1"><stop offset="0" stop-color="${trim}" stop-opacity="0.85"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}m" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${trim}" stop-opacity="0.6"/><stop offset="0.5" stop-color="${trim}" stop-opacity="0"/><stop offset="1" stop-color="${trim}" stop-opacity="0.6"/></linearGradient>
+      <linearGradient id="${d}n" x1="0.5" y1="1" x2="0.5" y2="0"><stop offset="0" stop-color="${c1}" stop-opacity="0.4"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}o" cx="0.35" cy="0.3" r="0.78"><stop offset="0" stop-color="#fff"/><stop offset="0.45" stop-color="${trim}"/><stop offset="1" stop-color="${c2}"/></radialGradient>
+      <filter id="${d}f1"><feGaussianBlur stdDeviation="0.6"/></filter>
+      <filter id="${d}f2"><feGaussianBlur stdDeviation="2"/></filter>
+      <filter id="${d}f3"><feGaussianBlur stdDeviation="5"/></filter>
+    </defs>
+    <!-- depth -->
+    <path d="M108 16 Q150 30 192 16 L286 216 Q150 252 14 216 Z" fill="${c2}" filter="url(#${d}f3)" opacity="0.28"/>
+    <!-- Layer 1: base skirt -->
+    <path d="M108 16 Q150 30 192 16 L286 216 Q150 252 14 216 Z" fill="url(#${d}a)" stroke="${trim}" stroke-width="1.5"/>
+    <!-- Layer 2: deep fold shadows -->
+    <path d="M108 16 Q150 30 192 16 L286 216 Q150 252 14 216 Z" fill="url(#${d}h)" opacity="0.7"/>
+    <path d="M108 16 Q150 30 192 16 L286 216 Q150 252 14 216 Z" fill="url(#${d}d)" opacity="0.55"/>
+    <path d="M126 24 L72 210" stroke="${c2}" stroke-opacity="0.28" stroke-width="20" fill="none" stroke-linecap="round" filter="url(#${d}f2)"/>
+    <path d="M150 28 L150 246" stroke="${c2}" stroke-opacity="0.18" stroke-width="14" fill="none" stroke-linecap="round" filter="url(#${d}f2)"/>
+    <path d="M178 24 L240 208" stroke="${c2}" stroke-opacity="0.22" stroke-width="16" fill="none" stroke-linecap="round" filter="url(#${d}f2)"/>
+    <!-- Layer 3: fabric highlights -->
+    <path d="M108 16 Q150 30 192 16 L192 32 Q150 46 108 32 Z" fill="${trim}" opacity="0.9"/>
+    <path d="M108 16 Q150 30 192 16 L286 216 Q150 252 14 216 Z" fill="url(#${d}c)" opacity="0.5"/>
+    <path d="M192 22 L262 208" stroke="#fff" stroke-opacity="0.18" stroke-width="18" fill="none" stroke-linecap="round" filter="url(#${d}f2)"/>
+    <path d="M108 16 Q150 30 192 16 L286 216 Q150 252 14 216 Z" fill="url(#${d}e)" opacity="0.4"/>
+    <!-- tulle fold details -->
+    <path d="M138 22 L90 210" stroke="${trim}" stroke-opacity="0.2" stroke-width="4" fill="none" stroke-linecap="round" filter="url(#${d}f1)"/>
+    <path d="M162 26 L165 244" stroke="${trim}" stroke-opacity="0.18" stroke-width="4" fill="none" stroke-linecap="round" filter="url(#${d}f1)"/>
+    <!-- Layer 4: rim light -->
+    <path d="M14 218 Q150 254 286 218" stroke="${trim}" stroke-opacity="0.5" stroke-width="2" fill="none"/>
+    <g fill="${trim}" opacity="0.88">
+      ${Array.from({length:9},(_, i)=>`<circle cx="${(24+i*31.5).toFixed(1)}" cy="${214-(i%2?5:0)}" r="11"/>`).join('')}
+    </g>
+    <path d="M14 216 Q150 252 286 216" stroke="${trim}" stroke-opacity="0.4" stroke-width="1.5" fill="none"/>
+    ${spark(112,148,5.5,0.55)} ${spark(200,130,4.5,0.48)}`);
+  add('bottom', name, [300,240], svg, {cx:0.5,cy:0.625,aw:0.74,z:20});
 }
 
 /* ---------- 왕관 / 티아라 ---------- */
-function crown(name, metal1, metal2, gemc1, gemc2, tall) {
-  const id=_uid+1;
-  const h = tall? 150:120;
-  const peak = tall? 30:55;
+function crown(name, metal1, metal2, gc1, gc2, tall) {
+  const d = _uid + 1;
+  const h = tall ? 150 : 120;
+  const pk = tall ? 30 : 55;
   const svg = S(240, h, `
-    <defs><linearGradient id="cr${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${metal1}"/><stop offset="1" stop-color="${metal2}"/></linearGradient></defs>
-    <path d="M30 ${h-24} L44 ${peak} L92 ${h-58} L120 ${peak-18} L148 ${h-58} L196 ${peak} L210 ${h-24} Z"
-          fill="url(#cr${id})" stroke="${metal2}" stroke-width="2"/>
-    <rect x="26" y="${h-30}" width="188" height="18" rx="9" fill="url(#cr${id})" stroke="${metal2}" stroke-width="2"/>
-    ${gem('cg'+id,120,peak-6,12,gemc1,gemc2)}
-    ${gem('cg'+id+'a',44,peak+6,8,gemc1,gemc2)}
-    ${gem('cg'+id+'b',196,peak+6,8,gemc1,gemc2)}
-    <circle cx="70" cy="${h-21}" r="5" fill="${gemc1}"/><circle cx="120" cy="${h-21}" r="5" fill="${gemc2}"/><circle cx="170" cy="${h-21}" r="5" fill="${gemc1}"/>
-    ${spark(120,peak-20,6)} ${spark(60,peak+20,4,0.6)}`);
-  add('crown', name, [240,h], svg, { cx:0.5, cy:0.055, aw:0.42, z:46 });
+    <defs>
+      <linearGradient id="${d}a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${metal1}"/><stop offset="0.5" stop-color="${metal1}"/><stop offset="1" stop-color="${metal2}"/></linearGradient>
+      <linearGradient id="${d}b" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${metal1}" stop-opacity="0"/><stop offset="0.5" stop-color="#fff" stop-opacity="0.55"/><stop offset="1" stop-color="${metal1}" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}c" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.5"/><stop offset="1" stop-color="${metal1}" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}d" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${metal2}"/><stop offset="1" stop-color="${metal1}"/></linearGradient>
+      <linearGradient id="${d}e" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${metal1}" stop-opacity="0.6"/><stop offset="1" stop-color="${metal2}" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${metal2}" stop-opacity="0.4"/><stop offset="1" stop-color="${metal2}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}g" cx="0.5" cy="0.3" r="0.7"><stop offset="0" stop-color="#fff" stop-opacity="0.4"/><stop offset="1" stop-color="${metal1}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}h" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${metal2}" stop-opacity="0.36"/><stop offset="0.5" stop-color="${metal2}" stop-opacity="0"/><stop offset="1" stop-color="${metal2}" stop-opacity="0.36"/></linearGradient>
+      <linearGradient id="${d}i" x1="0.15" y1="0" x2="0.5" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.6"/><stop offset="1" stop-color="${metal1}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}j" cx="0.35" cy="0.3" r="0.8"><stop offset="0" stop-color="#fff"/><stop offset="0.45" stop-color="${gc1}"/><stop offset="1" stop-color="${gc2}"/></radialGradient>
+      <radialGradient id="${d}k" cx="0.35" cy="0.3" r="0.8"><stop offset="0" stop-color="#fff"/><stop offset="0.45" stop-color="${gc1}"/><stop offset="1" stop-color="${gc2}"/></radialGradient>
+      <radialGradient id="${d}l" cx="0.35" cy="0.3" r="0.8"><stop offset="0" stop-color="#fff"/><stop offset="0.45" stop-color="${gc1}"/><stop offset="1" stop-color="${gc2}"/></radialGradient>
+      <radialGradient id="${d}m" cx="0.35" cy="0.28" r="0.75"><stop offset="0" stop-color="#fff" stop-opacity="0.7"/><stop offset="0.5" stop-color="${gc1}" stop-opacity="0.4"/><stop offset="1" stop-color="${gc2}" stop-opacity="0.1"/></radialGradient>
+      <linearGradient id="${d}n" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${metal1}" stop-opacity="0.9"/><stop offset="1" stop-color="${metal2}" stop-opacity="0.2"/></linearGradient>
+      <radialGradient id="${d}o" cx="0.5" cy="0.5" r="0.6"><stop offset="0" stop-color="#fff" stop-opacity="0.22"/><stop offset="1" stop-color="${metal2}" stop-opacity="0"/></radialGradient>
+      <filter id="${d}f1"><feGaussianBlur stdDeviation="0.5"/></filter>
+      <filter id="${d}f2"><feGaussianBlur stdDeviation="1.5"/></filter>
+      <filter id="${d}f3"><feGaussianBlur stdDeviation="3.5"/></filter>
+    </defs>
+    <!-- depth glow -->
+    <path d="M30 ${h-24} L44 ${pk} L92 ${h-58} L120 ${pk-18} L148 ${h-58} L196 ${pk} L210 ${h-24} Z" fill="${metal2}" filter="url(#${d}f3)" opacity="0.38"/>
+    <!-- Layer 1: crown base -->
+    <path d="M30 ${h-24} L44 ${pk} L92 ${h-58} L120 ${pk-18} L148 ${h-58} L196 ${pk} L210 ${h-24} Z" fill="url(#${d}a)" stroke="${metal2}" stroke-width="1.8"/>
+    <rect x="26" y="${h-30}" width="188" height="18" rx="9" fill="url(#${d}a)" stroke="${metal2}" stroke-width="1.8"/>
+    <!-- Layer 2: deep shadows -->
+    <path d="M30 ${h-24} L44 ${pk} L92 ${h-58} L120 ${pk-18} L148 ${h-58} L196 ${pk} L210 ${h-24} Z" fill="url(#${d}f)" opacity="0.5"/>
+    <rect x="26" y="${h-30}" width="188" height="18" rx="9" fill="url(#${d}h)" opacity="0.5"/>
+    <!-- inner filigree lines -->
+    <path d="M44 ${pk} L72 ${h-30}" stroke="${metal2}" stroke-opacity="0.35" stroke-width="1.2" fill="none" filter="url(#${d}f1)"/>
+    <path d="M196 ${pk} L168 ${h-30}" stroke="${metal2}" stroke-opacity="0.35" stroke-width="1.2" fill="none" filter="url(#${d}f1)"/>
+    <path d="M120 ${pk-18} L120 ${h-30}" stroke="${metal2}" stroke-opacity="0.3" stroke-width="1.2" fill="none" filter="url(#${d}f1)"/>
+    <!-- Layer 3: metallic highlights -->
+    <path d="M30 ${h-24} L44 ${pk} L92 ${h-58} L120 ${pk-18} L148 ${h-58} L196 ${pk} L210 ${h-24} Z" fill="url(#${d}g)" opacity="0.6"/>
+    <rect x="26" y="${h-30}" width="188" height="18" rx="9" fill="url(#${d}o)" opacity="0.7"/>
+    <!-- Layer 4: rim light -->
+    <path d="M44 ${pk} L120 ${pk-20} L196 ${pk}" stroke="#fff" stroke-opacity="0.55" stroke-width="2" fill="none" stroke-linecap="round" filter="url(#${d}f2)"/>
+    <!-- gems (8-facet) -->
+    ${gemCut(120, pk-6, 12, `${d}j`)}
+    ${gemCut(44, pk+6, 8, `${d}k`)}
+    ${gemCut(196, pk+6, 8, `${d}l`)}
+    <!-- band gems -->
+    <circle cx="70" cy="${h-21}" r="5" fill="${gc1}" stroke="${metal2}" stroke-width="1"/>
+    <circle cx="120" cy="${h-21}" r="5" fill="${gc2}" stroke="${metal2}" stroke-width="1"/>
+    <circle cx="170" cy="${h-21}" r="5" fill="${gc1}" stroke="${metal2}" stroke-width="1"/>
+    ${spark(120,pk-22,6.5,0.7)} ${spark(44,pk-8,4,0.55)} ${spark(196,pk-8,4,0.55)}`);
+  add('crown', name, [240,h], svg, {cx:0.5,cy:0.055,aw:0.42,z:46});
 }
 
 /* ---------- 귀걸이 (좌우 한 쌍) ---------- */
-function earring(name, metal, gemc1, gemc2, shape) {
-  const id=_uid+1;
-  const drop = (x) => shape==='round'
-    ? `<circle cx="${x}" cy="92" r="14" fill="url(#er${id})" stroke="${metal}" stroke-width="2"/>`
-    : `<path d="M${x} 76 L${x+13} 96 L${x} 120 L${x-13} 96 Z" fill="url(#er${id})" stroke="${metal}" stroke-width="2"/>`;
+function earring(name, metal, gc1, gc2, shape) {
+  const d = _uid + 1;
+  const gemShape = (x, cy, r) => shape === 'round'
+    ? gemCut(x, cy, r, `${d}j`)
+    : `${gemCut(x, cy-10, r*0.7, `${d}j`)}
+       <path d="M${x} ${cy-22} L${x+r} ${cy} L${x} ${cy+22} L${x-r} ${cy} Z" fill="url(#${d}j)" stroke="${metal}" stroke-width="1.2"/>
+       ${Array.from({length:8},(_, i)=>{const a=i*Math.PI/4;return`<line x1="${x}" y1="${cy}" x2="${(x+r*Math.cos(a)).toFixed(1)}" y2="${(cy+r*Math.sin(a)).toFixed(1)}" stroke="rgba(255,255,255,0.38)" stroke-width="0.7"/>`;}).join('')}`;
   const svg = S(240, 150, `
-    <defs><radialGradient id="er${id}" cx="0.35" cy="0.3" r="0.8"><stop offset="0" stop-color="#fff"/><stop offset="0.4" stop-color="${gemc1}"/><stop offset="1" stop-color="${gemc2}"/></radialGradient></defs>
-    <circle cx="40" cy="60" r="5" fill="${metal}"/><line x1="40" y1="64" x2="40" y2="76" stroke="${metal}" stroke-width="3"/>
-    <circle cx="200" cy="60" r="5" fill="${metal}"/><line x1="200" y1="64" x2="200" y2="76" stroke="${metal}" stroke-width="3"/>
-    ${drop(40)} ${drop(200)}
-    ${spark(40,88,4,0.7)} ${spark(200,88,4,0.7)}`);
-  add('earring', name, [240,150], svg, { cx:0.5, cy:0.205, aw:0.62, z:44 });
+    <defs>
+      <linearGradient id="${d}a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${metal}"/><stop offset="0.5" stop-color="${metal}"/><stop offset="1" stop-color="${metal}"/></linearGradient>
+      <radialGradient id="${d}b" cx="0.35" cy="0.3" r="0.7"><stop offset="0" stop-color="#fff" stop-opacity="0.7"/><stop offset="1" stop-color="${metal}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}c" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.5"/><stop offset="1" stop-color="${metal}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}d" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="${metal}" stop-opacity="0.3"/><stop offset="1" stop-color="${metal}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}e" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0.6"/><stop offset="1" stop-color="${metal}" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${metal}"/><stop offset="1" stop-color="${metal}"/></linearGradient>
+      <radialGradient id="${d}g" cx="0.4" cy="0.3" r="0.65"><stop offset="0" stop-color="#fff" stop-opacity="0.55"/><stop offset="1" stop-color="${metal}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}h" x1="0.15" y1="0" x2="0.5" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.6"/><stop offset="1" stop-color="${metal}" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}i" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${metal}" stop-opacity="0.5"/><stop offset="1" stop-color="${metal}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}j" cx="0.35" cy="0.3" r="0.8"><stop offset="0" stop-color="#fff"/><stop offset="0.4" stop-color="${gc1}"/><stop offset="1" stop-color="${gc2}"/></radialGradient>
+      <radialGradient id="${d}k" cx="0.35" cy="0.3" r="0.8"><stop offset="0" stop-color="#fff"/><stop offset="0.4" stop-color="${gc1}"/><stop offset="1" stop-color="${gc2}"/></radialGradient>
+      <radialGradient id="${d}l" cx="0.5" cy="0.3" r="0.7"><stop offset="0" stop-color="#fff" stop-opacity="0.8"/><stop offset="1" stop-color="${gc1}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}m" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${metal}" stop-opacity="0.8"/><stop offset="1" stop-color="${metal}" stop-opacity="0.1"/></linearGradient>
+      <radialGradient id="${d}n" cx="0.4" cy="0.35" r="0.7"><stop offset="0" stop-color="#fff" stop-opacity="0.45"/><stop offset="1" stop-color="${metal}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}o" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.45"/><stop offset="1" stop-color="${metal}" stop-opacity="0"/></linearGradient>
+      <filter id="${d}f1"><feGaussianBlur stdDeviation="0.5"/></filter>
+      <filter id="${d}f2"><feGaussianBlur stdDeviation="1.5"/></filter>
+      <filter id="${d}f3"><feGaussianBlur stdDeviation="3"/></filter>
+    </defs>
+    <!-- earring posts (left) -->
+    <circle cx="40" cy="56" r="6" fill="url(#${d}a)" stroke="${metal}" stroke-width="1"/>
+    <circle cx="37" cy="53" r="2.2" fill="#fff" opacity="0.75"/>
+    <rect x="37" y="61" width="6" height="2" rx="1" fill="${metal}"/>
+    <line x1="40" y1="63" x2="40" y2="74" stroke="${metal}" stroke-width="3.5" stroke-linecap="round"/>
+    <!-- setting hook left -->
+    <circle cx="40" cy="76" r="4" fill="${metal}" stroke="${metal}" stroke-width="1"/>
+    <!-- gem left -->
+    ${gemShape(40, 102, 16)}
+    <!-- earring posts (right) -->
+    <circle cx="200" cy="56" r="6" fill="url(#${d}a)" stroke="${metal}" stroke-width="1"/>
+    <circle cx="197" cy="53" r="2.2" fill="#fff" opacity="0.75"/>
+    <rect x="197" y="61" width="6" height="2" rx="1" fill="${metal}"/>
+    <line x1="200" y1="63" x2="200" y2="74" stroke="${metal}" stroke-width="3.5" stroke-linecap="round"/>
+    <!-- setting hook right -->
+    <circle cx="200" cy="76" r="4" fill="${metal}" stroke="${metal}" stroke-width="1"/>
+    <!-- gem right -->
+    ${gemShape(200, 102, 16)}
+    ${spark(40,98,4.5,0.72)} ${spark(200,98,4.5,0.72)}`);
+  add('earring', name, [240,150], svg, {cx:0.5,cy:0.205,aw:0.62,z:44});
 }
 
 /* ---------- 목걸이 ---------- */
-function necklace(name, metal, gemc1, gemc2, style) {
-  const id=_uid+1;
-  const pendant = style==='heart'
-    ? `<path d="M120 78 C112 66 92 70 92 86 C92 102 120 120 120 120 C120 120 148 102 148 86 C148 70 128 66 120 78 Z" fill="url(#nk${id})" stroke="${metal}" stroke-width="2"/>`
-    : `<circle cx="120" cy="96" r="18" fill="url(#nk${id})" stroke="${metal}" stroke-width="2"/>`;
+function necklace(name, metal, gc1, gc2, style) {
+  const d = _uid + 1;
+  const pendant = style === 'heart'
+    ? `<path d="M120 76 C112 64 90 68 90 84 C90 100 120 120 120 120 C120 120 150 100 150 84 C150 68 128 64 120 76 Z" fill="url(#${d}j)" stroke="${metal}" stroke-width="1.5"/>
+       <path d="M120 76 C116 70 110 70 108 76 C106 82 110 90 120 100" stroke="#fff" stroke-opacity="0.45" stroke-width="3" fill="none" stroke-linecap="round"/>`
+    : `${gemCut(120, 96, 18, `${d}j`)}`;
   const svg = S(240, 130, `
-    <defs><radialGradient id="nk${id}" cx="0.35" cy="0.3" r="0.8"><stop offset="0" stop-color="#fff"/><stop offset="0.4" stop-color="${gemc1}"/><stop offset="1" stop-color="${gemc2}"/></radialGradient></defs>
-    <path d="M48 40 Q120 96 192 40" fill="none" stroke="${metal}" stroke-width="5"/>
-    <path d="M48 40 Q120 96 192 40" fill="none" stroke="#fff" stroke-width="1.5" opacity="0.5"/>
-    ${Array.from({length:9},(_,i)=>{const t=i/8;const x=48+144*t;const y=40+56*Math.sin(Math.PI*t);return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="${gemc1}"/>`;}).join('')}
+    <defs>
+      <linearGradient id="${d}a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${metal}"/><stop offset="1" stop-color="${metal}"/></linearGradient>
+      <linearGradient id="${d}b" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0.6"/><stop offset="1" stop-color="${metal}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}c" cx="0.4" cy="0.35" r="0.65"><stop offset="0" stop-color="#fff" stop-opacity="0.55"/><stop offset="1" stop-color="${metal}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}d" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.5"/><stop offset="1" stop-color="${metal}" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}e" x1="0.15" y1="0" x2="0.5" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.6"/><stop offset="1" stop-color="${metal}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}f" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="${metal}" stop-opacity="0.25"/><stop offset="1" stop-color="${metal}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${metal}" stop-opacity="0.5"/><stop offset="1" stop-color="${metal}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}h" cx="0.35" cy="0.3" r="0.75"><stop offset="0" stop-color="#fff" stop-opacity="0.7"/><stop offset="1" stop-color="${gc1}" stop-opacity="0.1"/></radialGradient>
+      <linearGradient id="${d}i" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${metal}" stop-opacity="0.8"/><stop offset="1" stop-color="${metal}" stop-opacity="0.1"/></linearGradient>
+      <radialGradient id="${d}j" cx="0.35" cy="0.3" r="0.8"><stop offset="0" stop-color="#fff"/><stop offset="0.4" stop-color="${gc1}"/><stop offset="1" stop-color="${gc2}"/></radialGradient>
+      <radialGradient id="${d}k" cx="0.35" cy="0.3" r="0.78"><stop offset="0" stop-color="#fff"/><stop offset="0.4" stop-color="${gc1}"/><stop offset="1" stop-color="${gc2}"/></radialGradient>
+      <linearGradient id="${d}l" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${metal}" stop-opacity="0.6"/><stop offset="0.5" stop-color="${metal}" stop-opacity="0"/><stop offset="1" stop-color="${metal}" stop-opacity="0.6"/></linearGradient>
+      <radialGradient id="${d}m" cx="0.5" cy="0.3" r="0.68"><stop offset="0" stop-color="#fff" stop-opacity="0.5"/><stop offset="1" stop-color="${gc1}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}n" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${gc1}" stop-opacity="0.6"/><stop offset="1" stop-color="${gc2}" stop-opacity="0.2"/></linearGradient>
+      <radialGradient id="${d}o" cx="0.38" cy="0.28" r="0.7"><stop offset="0" stop-color="#fff" stop-opacity="0.65"/><stop offset="0.4" stop-color="${gc1}" stop-opacity="0.2"/><stop offset="1" stop-color="${gc2}" stop-opacity="0"/></radialGradient>
+      <filter id="${d}f1"><feGaussianBlur stdDeviation="0.5"/></filter>
+      <filter id="${d}f2"><feGaussianBlur stdDeviation="1.5"/></filter>
+      <filter id="${d}f3"><feGaussianBlur stdDeviation="3"/></filter>
+    </defs>
+    <!-- chain depth glow -->
+    <path d="M48 40 Q120 96 192 40" fill="none" stroke="${metal}" stroke-width="8" filter="url(#${d}f3)" opacity="0.38"/>
+    <!-- main chain -->
+    <path d="M48 40 Q120 96 192 40" fill="none" stroke="${metal}" stroke-width="5.5" stroke-linecap="round"/>
+    <path d="M48 40 Q120 96 192 40" fill="none" stroke="#fff" stroke-width="1.5" opacity="0.45" stroke-linecap="round"/>
+    <!-- chain links (beads) -->
+    ${Array.from({length:11},(_, i)=>{
+      const t = i/10; const x = 48+144*t; const y = 40+56*Math.sin(Math.PI*t);
+      return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" fill="${metal}" stroke="#fff" stroke-opacity="0.3" stroke-width="0.8"/><circle cx="${(x-1.5).toFixed(1)}" cy="${(y-1.5).toFixed(1)}" r="1.8" fill="#fff" opacity="0.65"/>`;
+    }).join('')}
+    <!-- pendant setting -->
+    <circle cx="120" cy="96" r="${style==='heart'?22:22}" fill="${metal}" stroke="${metal}" stroke-width="1.5" opacity="0.35"/>
+    <!-- pendant gem -->
     ${pendant}
-    ${spark(120,92,5,0.7)}`);
-  add('necklace', name, [240,130], svg, { cx:0.5, cy:0.285, aw:0.34, z:42 });
+    ${spark(120,88,5.5,0.72)}`);
+  add('necklace', name, [240,130], svg, {cx:0.5,cy:0.285,aw:0.34,z:42});
 }
 
 /* ---------- 구두 (한 쌍의 하이힐) ---------- */
 function shoes(name, c1, c2, trim) {
-  const id=_uid+1;
-  const heel = (x)=>`
-    <path d="M${x} 30 C${x-26} 34 ${x-30} 60 ${x-30} 78 L${x-30} 92 C${x-30} 100 ${x-18} 102 ${x+2} 100 C${x+30} 96 ${x+40} 92 ${x+44} 86 C${x+46} 80 ${x+40} 74 ${x+24} 72 C${x+6} 70 ${x} 50 ${x} 30 Z" fill="url(#sh${id})" stroke="${trim}" stroke-width="2"/>
-    <path d="M${x+38} 88 L${x+40} 120 L${x+34} 120 L${x+30} 92 Z" fill="${c2}" stroke="${trim}" stroke-width="1.5"/>
-    <ellipse cx="${x-6}" cy="44" rx="6" ry="8" fill="#fff" opacity="0.4"/>`;
+  const d = _uid + 1;
+  const shoe = (x) => `
+    <!-- shoe body -->
+    <path d="M${x} 28 C${x-26} 32 ${x-30} 58 ${x-30} 76 L${x-30} 90 C${x-30} 100 ${x-16} 102 ${x+4} 100 C${x+32} 96 ${x+42} 90 ${x+46} 84 C${x+48} 78 ${x+42} 72 ${x+26} 70 C${x+8} 68 ${x+2} 48 ${x} 28 Z" fill="url(#${d}a)" stroke="${trim}" stroke-width="1.5"/>
+    <!-- sole -->
+    <path d="M${x-30} 90 L${x-30} 98 L${x+4} 106 L${x+46} 90 L${x+46} 82" fill="url(#${d}b)" stroke="${trim}" stroke-width="1"/>
+    <!-- heel post -->
+    <path d="M${x+40} 86 L${x+42} 122 L${x+35} 122 L${x+32} 90 Z" fill="url(#${d}c)" stroke="${trim}" stroke-width="1.2"/>
+    <!-- heel base -->
+    <rect x="${x+32}" y="118" width="12" height="5" rx="2.5" fill="${trim}"/>
+    <!-- Layer 2: shadow fold -->
+    <path d="M${x} 28 C${x-26} 32 ${x-30} 58 ${x-30} 76 L${x-30} 90 C${x-30} 100 ${x-16} 102 ${x+4} 100 C${x+32} 96 ${x+42} 90 ${x+46} 84 C${x+48} 78 ${x+42} 72 ${x+26} 70 C${x+8} 68 ${x+2} 48 ${x} 28 Z" fill="url(#${d}f)" opacity="0.55"/>
+    <!-- toe box shadow -->
+    <ellipse cx="${x-18}" cy="80" rx="8" ry="14" fill="${c2}" opacity="0.22" filter="url(#${d}f1)"/>
+    <!-- Layer 3: patent leather gloss highlights -->
+    <!-- primary large gloss -->
+    <ellipse cx="${x-8}" cy="42" rx="10" ry="16" fill="#fff" opacity="0.42" transform="rotate(-15,${x-8},42)"/>
+    <!-- secondary gloss reflection -->
+    <ellipse cx="${x-4}" cy="36" rx="4" ry="7" fill="#fff" opacity="0.62"/>
+    <!-- toe cap gloss -->
+    <ellipse cx="${x-22}" cy="72" rx="6" ry="10" fill="#fff" opacity="0.3" transform="rotate(-8,${x-22},72)"/>
+    <!-- vamp gloss streak -->
+    <path d="M${x+10} 60 C${x+18} 64 ${x+28} 70 ${x+32} 76" stroke="#fff" stroke-opacity="0.36" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <!-- Layer 4: rim light -->
+    <path d="M${x} 30 C${x-20} 36 ${x-28} 54 ${x-28} 72" stroke="#fff" stroke-opacity="0.5" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <path d="M${x+4} 102 C${x+28} 98 ${x+42} 90 ${x+46} 84" stroke="#fff" stroke-opacity="0.38" stroke-width="2" fill="none" stroke-linecap="round"/>`;
   const svg = S(260, 140, `
-    <defs><linearGradient id="sh${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs>
-    ${heel(56)} ${heel(168)}
-    ${spark(70,50,4,0.7)} ${spark(182,50,4,0.7)}`);
-  add('shoe', name, [260,140], svg, { cx:0.5, cy:0.93, aw:0.5, z:34 });
+    <defs>
+      <linearGradient id="${d}a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="0.5" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
+      <linearGradient id="${d}b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c2}"/><stop offset="1" stop-color="${trim}"/></linearGradient>
+      <linearGradient id="${d}c" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c2}"/><stop offset="1" stop-color="${trim}"/></linearGradient>
+      <linearGradient id="${d}d" x1="0.15" y1="0" x2="0.5" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.6"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}e" cx="0.3" cy="0.25" r="0.65"><stop offset="0" stop-color="#fff" stop-opacity="0.7"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}f" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c2}" stop-opacity="0.36"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.28"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}h" cx="0.5" cy="0.85" r="0.58"><stop offset="0" stop-color="#000" stop-opacity="0.18"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}i" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${c2}" stop-opacity="0.36"/><stop offset="0.5" stop-color="${c2}" stop-opacity="0"/><stop offset="1" stop-color="${c2}" stop-opacity="0.36"/></linearGradient>
+      <radialGradient id="${d}j" cx="0.35" cy="0.28" r="0.65"><stop offset="0" stop-color="#fff" stop-opacity="0.65"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}k" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c2}" stop-opacity="0.42"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}l" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${trim}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
+      <radialGradient id="${d}m" cx="0.35" cy="0.3" r="0.7"><stop offset="0" stop-color="#fff" stop-opacity="0.75"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}n" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
+      <radialGradient id="${d}o" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="${c1}" stop-opacity="0.2"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></radialGradient>
+      <filter id="${d}f1"><feGaussianBlur stdDeviation="0.6"/></filter>
+      <filter id="${d}f2"><feGaussianBlur stdDeviation="1.8"/></filter>
+      <filter id="${d}f3"><feGaussianBlur stdDeviation="4"/></filter>
+    </defs>
+    <!-- depth shadows -->
+    <path d="M26 76 L26 90 L60 106 L102 90 L102 82" fill="${c2}" filter="url(#${d}f3)" opacity="0.28"/>
+    <path d="M138 76 L138 90 L172 106 L214 90 L214 82" fill="${c2}" filter="url(#${d}f3)" opacity="0.28"/>
+    ${shoe(56)}
+    ${shoe(168)}
+    ${spark(46,40,4.5,0.72)} ${spark(158,40,4.5,0.72)}`);
+  add('shoe', name, [260,140], svg, {cx:0.5,cy:0.93,aw:0.5,z:34});
 }
 
 /* ---------- 액세서리 ---------- */
 function wings(name, c1, c2) {
-  const id=_uid+1;
+  const d = _uid + 1;
   const svg = S(420, 320, `
-    <defs><linearGradient id="wg${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="0.5" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs>
-    <g opacity="0.92">
-      <path d="M210 160 C150 60 60 40 30 90 C10 130 40 180 90 190 C50 200 40 250 70 280 C110 310 180 250 210 200 Z" fill="url(#wg${id})" stroke="${c2}" stroke-width="2"/>
-      <path d="M210 160 C270 60 360 40 390 90 C410 130 380 180 330 190 C370 200 380 250 350 280 C310 310 240 250 210 200 Z" fill="url(#wg${id})" stroke="${c2}" stroke-width="2"/>
-    </g>
-    ${spark(90,120,6)} ${spark(330,120,6)} ${spark(120,230,5,0.6)} ${spark(300,230,5,0.6)}`);
-  add('acc', name, [420,320], svg, { cx:0.5, cy:0.45, aw:1.25, z:6 });
+    <defs>
+      <linearGradient id="${d}a" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.9"/><stop offset="0.5" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
+      <linearGradient id="${d}b" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.9"/><stop offset="0.5" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
+      <radialGradient id="${d}c" cx="0.3" cy="0.3" r="0.7"><stop offset="0" stop-color="#fff" stop-opacity="0.5"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></radialGradient>
+      <radialGradient id="${d}d" cx="0.7" cy="0.3" r="0.7"><stop offset="0" stop-color="#fff" stop-opacity="0.5"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}e" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c2}" stop-opacity="0.25"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}f" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${c1}" stop-opacity="0.3"/><stop offset="0.5" stop-color="${c1}" stop-opacity="0"/><stop offset="1" stop-color="${c1}" stop-opacity="0.3"/></linearGradient>
+      <linearGradient id="${d}g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.4"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}h" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#fff" stop-opacity="0.15"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}i" x1="0.5" y1="0" x2="0.5" y2="1"><stop offset="0" stop-color="${c2}" stop-opacity="0.2"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}j" cx="0.25" cy="0.25" r="0.6"><stop offset="0" stop-color="#fff" stop-opacity="0.45"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></radialGradient>
+      <radialGradient id="${d}k" cx="0.75" cy="0.25" r="0.6"><stop offset="0" stop-color="#fff" stop-opacity="0.45"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}l" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="${c2}" stop-opacity="0.3"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}m" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.3"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}n" cx="0.5" cy="0.45" r="0.55"><stop offset="0" stop-color="${c1}" stop-opacity="0.15"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></radialGradient>
+      <radialGradient id="${d}o" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#fff" stop-opacity="0.2"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></radialGradient>
+      <filter id="${d}f1"><feGaussianBlur stdDeviation="0.8"/></filter>
+      <filter id="${d}f2"><feGaussianBlur stdDeviation="2.5"/></filter>
+      <filter id="${d}f3"><feGaussianBlur stdDeviation="5"/></filter>
+    </defs>
+    <!-- outer glow -->
+    <path d="M210 160 C150 60 60 40 30 90 C10 130 40 180 90 190 C50 200 40 250 70 280 C110 310 180 250 210 200 Z" fill="${c2}" filter="url(#${d}f3)" opacity="0.28"/>
+    <path d="M210 160 C270 60 360 40 390 90 C410 130 380 180 330 190 C370 200 380 250 350 280 C310 310 240 250 210 200 Z" fill="${c2}" filter="url(#${d}f3)" opacity="0.28"/>
+    <!-- Layer 1: base wings -->
+    <path d="M210 160 C150 60 60 40 30 90 C10 130 40 180 90 190 C50 200 40 250 70 280 C110 310 180 250 210 200 Z" fill="url(#${d}a)" stroke="${c2}" stroke-width="1.5" opacity="0.92"/>
+    <path d="M210 160 C270 60 360 40 390 90 C410 130 380 180 330 190 C370 200 380 250 350 280 C310 310 240 250 210 200 Z" fill="url(#${d}b)" stroke="${c2}" stroke-width="1.5" opacity="0.92"/>
+    <!-- Layer 2: deep wing fold shadows -->
+    <path d="M210 160 C150 60 60 40 30 90 C10 130 40 180 90 190 C50 200 40 250 70 280 C110 310 180 250 210 200 Z" fill="url(#${d}e)" opacity="0.6"/>
+    <path d="M210 160 C270 60 360 40 390 90 C410 130 380 180 330 190 C370 200 380 250 350 280 C310 310 240 250 210 200 Z" fill="url(#${d}i)" opacity="0.6"/>
+    <!-- wing veins left -->
+    <path d="M210 170 C165 110 100 90 55 95" stroke="${c2}" stroke-opacity="0.35" stroke-width="1.5" fill="none"/>
+    <path d="M205 178 C155 148 105 165 65 195" stroke="${c2}" stroke-opacity="0.28" stroke-width="1.2" fill="none"/>
+    <path d="M205 188 C165 210 120 235 80 262" stroke="${c2}" stroke-opacity="0.25" stroke-width="1.2" fill="none"/>
+    <path d="M208 175 C175 130 145 115 110 115" stroke="${c2}" stroke-opacity="0.22" stroke-width="1" fill="none"/>
+    <!-- wing veins right -->
+    <path d="M210 170 C255 110 320 90 365 95" stroke="${c2}" stroke-opacity="0.35" stroke-width="1.5" fill="none"/>
+    <path d="M215 178 C265 148 315 165 355 195" stroke="${c2}" stroke-opacity="0.28" stroke-width="1.2" fill="none"/>
+    <path d="M215 188 C255 210 300 235 340 262" stroke="${c2}" stroke-opacity="0.25" stroke-width="1.2" fill="none"/>
+    <path d="M212 175 C245 130 275 115 310 115" stroke="${c2}" stroke-opacity="0.22" stroke-width="1" fill="none"/>
+    <!-- Layer 3: shimmer highlights -->
+    <path d="M210 160 C150 60 60 40 30 90 C10 130 40 180 90 190 C50 200 40 250 70 280 C110 310 180 250 210 200 Z" fill="url(#${d}j)" opacity="0.7"/>
+    <path d="M210 160 C270 60 360 40 390 90 C410 130 380 180 330 190 C370 200 380 250 350 280 C310 310 240 250 210 200 Z" fill="url(#${d}k)" opacity="0.7"/>
+    <!-- Layer 4: rim light -->
+    <path d="M30 90 C60 40 150 60 210 160" stroke="#fff" stroke-opacity="0.45" stroke-width="2.5" fill="none" stroke-linecap="round" filter="url(#${d}f2)"/>
+    <path d="M390 90 C360 40 270 60 210 160" stroke="#fff" stroke-opacity="0.45" stroke-width="2.5" fill="none" stroke-linecap="round" filter="url(#${d}f2)"/>
+    ${spark(88,118,6.5,0.7)} ${spark(332,118,6.5,0.7)} ${spark(118,228,5.5,0.62)} ${spark(302,228,5.5,0.62)}`);
+  add('acc', name, [420,320], svg, {cx:0.5,cy:0.45,aw:1.25,z:6});
 }
-function wand(name, metal, gemc1, gemc2) {
-  const id=_uid+1;
+
+function wand(name, metal, gc1, gc2) {
+  const d = _uid + 1;
   const svg = S(120, 320, `
-    <defs><radialGradient id="wd${id}" cx="0.4" cy="0.35" r="0.8"><stop offset="0" stop-color="#fff"/><stop offset="0.5" stop-color="${gemc1}"/><stop offset="1" stop-color="${gemc2}"/></radialGradient></defs>
-    <rect x="54" y="90" width="12" height="210" rx="6" fill="${metal}"/>
-    <path d="M60 14 L74 50 112 56 84 82 92 120 60 100 28 120 36 82 8 56 46 50 Z" fill="url(#wd${id})" stroke="#fff" stroke-width="2"/>
-    ${spark(60,60,7)} ${spark(96,110,4,0.6)} ${spark(26,108,4,0.6)}`);
-  add('acc', name, [120,320], svg, { cx:0.74, cy:0.5, aw:0.34, z:48 });
+    <defs>
+      <linearGradient id="${d}a" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${metal}"/><stop offset="0.5" stop-color="#fff" stop-opacity="0.5"/><stop offset="1" stop-color="${metal}"/></linearGradient>
+      <radialGradient id="${d}b" cx="0.38" cy="0.32" r="0.72"><stop offset="0" stop-color="#fff"/><stop offset="0.42" stop-color="${gc1}"/><stop offset="1" stop-color="${gc2}"/></radialGradient>
+      <radialGradient id="${d}c" cx="0.35" cy="0.3" r="0.8"><stop offset="0" stop-color="#fff"/><stop offset="0.45" stop-color="${gc1}"/><stop offset="1" stop-color="${gc2}"/></radialGradient>
+      <linearGradient id="${d}d" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${metal}"/><stop offset="0.5" stop-color="${metal}"/><stop offset="1" stop-color="#fff" stop-opacity="0.2"/></linearGradient>
+      <linearGradient id="${d}e" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0.5"/><stop offset="1" stop-color="${metal}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}f" cx="0.35" cy="0.28" r="0.65"><stop offset="0" stop-color="#fff" stop-opacity="0.6"/><stop offset="1" stop-color="${gc1}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${gc1}" stop-opacity="0.7"/><stop offset="1" stop-color="${gc2}" stop-opacity="0.2"/></linearGradient>
+      <radialGradient id="${d}h" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="${gc1}" stop-opacity="0.4"/><stop offset="1" stop-color="${gc1}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}i" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${metal}" stop-opacity="0.6"/><stop offset="1" stop-color="${metal}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}j" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#fff" stop-opacity="0.3"/><stop offset="1" stop-color="${gc2}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}k" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.5"/><stop offset="1" stop-color="${metal}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}l" cx="0.4" cy="0.3" r="0.7"><stop offset="0" stop-color="#fff" stop-opacity="0.6"/><stop offset="1" stop-color="${gc1}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}m" x1="0.15" y1="0" x2="0.5" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.5"/><stop offset="1" stop-color="${metal}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}n" cx="0.5" cy="0.5" r="0.55"><stop offset="0" stop-color="${gc1}" stop-opacity="0.3"/><stop offset="1" stop-color="${gc1}" stop-opacity="0"/></radialGradient>
+      <radialGradient id="${d}o" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#fff" stop-opacity="0.25"/><stop offset="1" stop-color="${metal}" stop-opacity="0"/></radialGradient>
+      <filter id="${d}f1"><feGaussianBlur stdDeviation="0.6"/></filter>
+      <filter id="${d}f2"><feGaussianBlur stdDeviation="2"/></filter>
+      <filter id="${d}f3"><feGaussianBlur stdDeviation="5"/></filter>
+    </defs>
+    <!-- wand glow -->
+    <rect x="54" y="90" width="12" height="210" rx="6" fill="${gc1}" filter="url(#${d}f3)" opacity="0.3"/>
+    <!-- Layer 1: wand stick -->
+    <rect x="55" y="90" width="10" height="210" rx="5" fill="url(#${d}d)"/>
+    <!-- stick highlight -->
+    <rect x="56" y="92" width="3.5" height="206" rx="1.75" fill="#fff" opacity="0.35"/>
+    <!-- Layer 2: stick shadow -->
+    <rect x="61" y="92" width="3" height="206" rx="1.5" fill="${metal}" opacity="0.22"/>
+    <!-- ornament ring at top -->
+    <ellipse cx="60" cy="92" rx="8" ry="5" fill="${metal}" stroke="${metal}" stroke-width="1"/>
+    <ellipse cx="60" cy="92" rx="8" ry="5" fill="url(#${d}k)" opacity="0.7"/>
+    <!-- star glow -->
+    <path d="M60 14 L74 50 112 56 84 82 92 120 60 100 28 120 36 82 8 56 46 50 Z" fill="${gc1}" filter="url(#${d}f3)" opacity="0.4"/>
+    <!-- Layer 1 star: base -->
+    <path d="M60 14 L74 50 112 56 84 82 92 120 60 100 28 120 36 82 8 56 46 50 Z" fill="url(#${d}c)" stroke="${metal}" stroke-width="1.5"/>
+    <!-- Layer 2 star: deep facet shadows -->
+    <path d="M60 100 L28 120 L36 82 L60 67 Z" fill="${gc2}" opacity="0.25"/>
+    <path d="M60 100 L92 120 L84 82 L60 67 Z" fill="${gc2}" opacity="0.25"/>
+    <path d="M8 56 L46 50 L60 14 L60 67 Z" fill="${gc2}" opacity="0.18"/>
+    <path d="M112 56 L74 50 L60 14 L60 67 Z" fill="${gc2}" opacity="0.18"/>
+    <!-- 8 facet lines -->
+    ${Array.from({length:8},(_, i)=>{const pts=[[60,14],[74,50],[112,56],[84,82],[92,120],[28,120],[36,82],[8,56]];return`<line x1="60" y1="67" x2="${pts[i][0]}" y2="${pts[i][1]}" stroke="rgba(255,255,255,0.38)" stroke-width="0.8"/>`;}).join('')}
+    <!-- Layer 3: gem highlights -->
+    <path d="M60 14 L74 50 112 56 84 82 92 120 60 100 28 120 36 82 8 56 46 50 Z" fill="url(#${d}l)" opacity="0.7"/>
+    <!-- top-left facet shine -->
+    <path d="M60 14 L46 50 L8 56" fill="#fff" opacity="0.2"/>
+    <!-- Layer 4: rim light -->
+    <path d="M46 50 L60 14 L74 50" stroke="#fff" stroke-opacity="0.6" stroke-width="2" fill="none" stroke-linecap="round" filter="url(#${d}f2)"/>
+    <!-- sparkle trail -->
+    ${spark(60,62,7.5,0.82)} ${spark(98,108,4.5,0.62)} ${spark(22,106,4.5,0.62)} ${spark(85,34,3.5,0.5)}`);
+  add('acc', name, [120,320], svg, {cx:0.74,cy:0.5,aw:0.34,z:48});
 }
-function choker(name, c, gemc1, gemc2) {
-  const id=_uid+1;
+
+function choker(name, c, gc1, gc2) {
+  const d = _uid + 1;
   const svg = S(200, 80, `
-    <defs><radialGradient id="ck${id}" cx="0.4" cy="0.3" r="0.8"><stop offset="0" stop-color="#fff"/><stop offset="0.5" stop-color="${gemc1}"/><stop offset="1" stop-color="${gemc2}"/></radialGradient></defs>
-    <path d="M30 30 Q100 64 170 30" fill="none" stroke="${c}" stroke-width="10" stroke-linecap="round"/>
-    <circle cx="100" cy="50" r="12" fill="url(#ck${id})" stroke="#fff" stroke-opacity="0.6"/>`);
-  add('necklace', name, [200,80], svg, { cx:0.5, cy:0.255, aw:0.3, z:43 });
+    <defs>
+      <linearGradient id="${d}a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c}"/><stop offset="0.5" stop-color="${c}"/><stop offset="1" stop-color="${c}"/></linearGradient>
+      <linearGradient id="${d}b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.5"/><stop offset="1" stop-color="${c}" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}c" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c}" stop-opacity="0.4"/><stop offset="1" stop-color="${c}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}d" cx="0.35" cy="0.28" r="0.65"><stop offset="0" stop-color="#fff" stop-opacity="0.55"/><stop offset="1" stop-color="${c}" stop-opacity="0"/></radialGradient>
+      <radialGradient id="${d}e" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="${c}" stop-opacity="0.25"/><stop offset="1" stop-color="${c}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}f" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${c}" stop-opacity="0.35"/><stop offset="0.5" stop-color="${c}" stop-opacity="0"/><stop offset="1" stop-color="${c}" stop-opacity="0.35"/></linearGradient>
+      <radialGradient id="${d}g" cx="0.3" cy="0.25" r="0.7"><stop offset="0" stop-color="#fff" stop-opacity="0.4"/><stop offset="1" stop-color="${c}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}h" x1="0.15" y1="0" x2="0.5" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.55"/><stop offset="1" stop-color="${c}" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}i" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c}"/><stop offset="1" stop-color="${c}"/></linearGradient>
+      <radialGradient id="${d}j" cx="0.35" cy="0.3" r="0.8"><stop offset="0" stop-color="#fff"/><stop offset="0.4" stop-color="${gc1}"/><stop offset="1" stop-color="${gc2}"/></radialGradient>
+      <radialGradient id="${d}k" cx="0.4" cy="0.3" r="0.7"><stop offset="0" stop-color="#fff" stop-opacity="0.75"/><stop offset="1" stop-color="${gc1}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}l" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0.5"/><stop offset="0.5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#fff" stop-opacity="0.5"/></linearGradient>
+      <radialGradient id="${d}m" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="${gc1}" stop-opacity="0.25"/><stop offset="1" stop-color="${gc1}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}n" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${gc1}" stop-opacity="0.55"/><stop offset="1" stop-color="${gc2}" stop-opacity="0.2"/></linearGradient>
+      <radialGradient id="${d}o" cx="0.38" cy="0.28" r="0.7"><stop offset="0" stop-color="#fff" stop-opacity="0.65"/><stop offset="1" stop-color="${gc1}" stop-opacity="0"/></radialGradient>
+      <filter id="${d}f1"><feGaussianBlur stdDeviation="0.5"/></filter>
+      <filter id="${d}f2"><feGaussianBlur stdDeviation="1.8"/></filter>
+      <filter id="${d}f3"><feGaussianBlur stdDeviation="4"/></filter>
+    </defs>
+    <!-- glow -->
+    <path d="M28 32 Q100 66 172 32" fill="none" stroke="${c}" stroke-width="14" stroke-linecap="round" filter="url(#${d}f3)" opacity="0.3"/>
+    <!-- Layer 1: choker band base -->
+    <path d="M28 32 Q100 66 172 32" fill="none" stroke="${c}" stroke-width="11" stroke-linecap="round"/>
+    <!-- Layer 2: band fold shadow -->
+    <path d="M28 32 Q100 66 172 32" fill="none" stroke="${c}" stroke-width="6" stroke-linecap="round" stroke-opacity="0.4" filter="url(#${d}f1)"/>
+    <!-- Layer 3: band highlight -->
+    <path d="M30 30 Q100 62 170 30" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-opacity="0.38"/>
+    <!-- Layer 4: rim light -->
+    <path d="M32 28 Q100 60 168 28" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.55" filter="url(#${d}f2)"/>
+    <!-- center gem setting -->
+    <circle cx="100" cy="50" r="16" fill="${c}" stroke="${c}" stroke-width="2" opacity="0.8"/>
+    <circle cx="100" cy="50" r="14" fill="none" stroke="${c}" stroke-width="2.5"/>
+    <!-- gem 8-facet -->
+    ${gemCut(100, 50, 13, `${d}j`)}
+    ${spark(100,46,4.5,0.72)}`);
+  add('necklace', name, [200,80], svg, {cx:0.5,cy:0.255,aw:0.3,z:43});
 }
+
 function gloves(name, c1, c2, trim) {
-  const id=_uid+1;
+  const d = _uid + 1;
+  const glove = (x, flip) => {
+    const f = flip ? -1 : 1;
+    const cx = flip ? 300 - x : x;
+    return `
+    <!-- glove ${flip?'right':'left'} shadow -->
+    <path d="M${cx} 18 C${cx-f*20} 82 ${cx-f*28} 152 ${cx-f*18} 210 C${cx-f*16} 228 ${cx-f*2} 228 ${cx} 212 C${cx+f*4} 154 ${cx+f*16} 84 ${cx+f*28} 34 Z" fill="${c2}" filter="url(#${d}f3)" opacity="0.25"/>
+    <!-- Layer 1: base -->
+    <path d="M${cx} 18 C${cx-f*20} 82 ${cx-f*28} 152 ${cx-f*18} 210 C${cx-f*16} 228 ${cx-f*2} 228 ${cx} 212 C${cx+f*4} 154 ${cx+f*16} 84 ${cx+f*28} 34 Z" fill="url(#${d}a)" stroke="${trim}" stroke-width="1.8"/>
+    <!-- hand/palm ellipse -->
+    <ellipse cx="${cx-f*10}" cy="216" rx="14" ry="17" fill="url(#${d}a)" stroke="${trim}" stroke-width="1.5"/>
+    <!-- Layer 2: deep fold shadows -->
+    <path d="M${cx} 18 C${cx-f*20} 82 ${cx-f*28} 152 ${cx-f*18} 210 C${cx-f*16} 228 ${cx-f*2} 228 ${cx} 212 C${cx+f*4} 154 ${cx+f*16} 84 ${cx+f*28} 34 Z" fill="url(#${d}e)" opacity="0.55"/>
+    <path d="M${cx-f*4} 22 C${cx-f*10} 88 ${cx-f*14} 158 ${cx-f*14} 210" stroke="${c2}" stroke-opacity="0.22" stroke-width="12" fill="none" filter="url(#${d}f2)"/>
+    <!-- Layer 3: satin highlights -->
+    <path d="M${cx} 18 C${cx-f*20} 82 ${cx-f*28} 152 ${cx-f*18} 210 C${cx-f*16} 228 ${cx-f*2} 228 ${cx} 212 C${cx+f*4} 154 ${cx+f*16} 84 ${cx+f*28} 34 Z" fill="url(#${d}c)" opacity="0.6"/>
+    <!-- main satin highlight streak -->
+    <path d="M${cx+f*20} 28 C${cx+f*18} 96 ${cx+f*16} 168 ${cx+f*14} 208" stroke="#fff" stroke-opacity="0.4" stroke-width="7" fill="none" stroke-linecap="round"/>
+    <path d="M${cx+f*22} 30 C${cx+f*20} 96 ${cx+f*18} 166 ${cx+f*16} 206" stroke="#fff" stroke-opacity="0.25" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <!-- wrist ruffle -->
+    <path d="M${cx-f*18} 188 Q${cx} 200 ${cx+f*28} 185" stroke="${trim}" stroke-opacity="0.65" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M${cx-f*18} 196 Q${cx} 208 ${cx+f*28} 193" stroke="${trim}" stroke-opacity="0.5" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <!-- Layer 4: rim light -->
+    <path d="M${cx+f*28} 34 C${cx+f*24} 96 ${cx+f*20} 168 ${cx+f*18} 210" stroke="#fff" stroke-opacity="0.48" stroke-width="2.5" fill="none" stroke-linecap="round" filter="url(#${d}f1)"/>`;
+  };
   const svg = S(300, 260, `
-    <defs><linearGradient id="gl${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs>
-    <path d="M64 20 C44 80 34 150 42 210 C44 226 60 226 62 210 C66 152 78 86 92 36 Z" fill="url(#gl${id})" stroke="${trim}" stroke-width="2"/>
-    <path d="M236 20 C256 80 266 150 258 210 C256 226 240 226 238 210 C234 152 222 86 208 36 Z" fill="url(#gl${id})" stroke="${trim}" stroke-width="2"/>
-    <ellipse cx="52" cy="216" rx="13" ry="16" fill="url(#gl${id})"/><ellipse cx="248" cy="216" rx="13" ry="16" fill="url(#gl${id})"/>`);
-  add('acc', name, [300,260], svg, { cx:0.5, cy:0.5, aw:0.86, z:32 });
+    <defs>
+      <linearGradient id="${d}a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="0.45" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
+      <radialGradient id="${d}b" cx="0.35" cy="0.22" r="0.68"><stop offset="0" stop-color="#fff" stop-opacity="0.6"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}c" x1="0.75" y1="0" x2="0.25" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.38"/><stop offset="0.6" stop-color="#fff" stop-opacity="0.12"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}d" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${c2}" stop-opacity="0.36"/><stop offset="0.5" stop-color="${c2}" stop-opacity="0"/><stop offset="1" stop-color="${c2}" stop-opacity="0.36"/></linearGradient>
+      <linearGradient id="${d}e" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c2}" stop-opacity="0.38"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.28"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}g" cx="0.5" cy="0.88" r="0.56"><stop offset="0" stop-color="#000" stop-opacity="0.15"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}h" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c2}" stop-opacity="0.4"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}i" cx="0.35" cy="0.3" r="0.7"><stop offset="0" stop-color="#fff" stop-opacity="0.5"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}j" x1="0.15" y1="0" x2="0.5" y2="1"><stop offset="0" stop-color="${trim}" stop-opacity="0.85"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}k" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${trim}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
+      <radialGradient id="${d}l" cx="0.3" cy="0.25" r="0.7"><stop offset="0" stop-color="#fff" stop-opacity="0.55"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${d}m" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.45"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${d}n" x1="0.5" y1="0" x2="0.5" y2="1"><stop offset="0" stop-color="${c2}" stop-opacity="0.3"/><stop offset="0.5" stop-color="${c2}" stop-opacity="0.1"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="${d}o" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="${c1}" stop-opacity="0.2"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></radialGradient>
+      <filter id="${d}f1"><feGaussianBlur stdDeviation="0.6"/></filter>
+      <filter id="${d}f2"><feGaussianBlur stdDeviation="2"/></filter>
+      <filter id="${d}f3"><feGaussianBlur stdDeviation="4.5"/></filter>
+    </defs>
+    ${glove(64, false)}
+    ${glove(236, true)}`);
+  add('acc', name, [300,260], svg, {cx:0.5,cy:0.5,aw:0.86,z:32});
 }
 
 /* =========================================================
